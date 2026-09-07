@@ -15,6 +15,7 @@ from ._common import (
     Estimate,
     call_cost,
     estimate_calls,
+    provider_block,
     render,
     slot,
     slugify,
@@ -70,6 +71,7 @@ async def _level(ctx, *, model, template: str, n: int, target_id: str, **tctx) -
     inst, res = await ctx.call_structured(
         target_id=target_id, model=model.slug, messages=messages, schema=TaxonomyLevel,
         temperature=model.temperature, max_tokens=min(model.max_tokens, 1200),
+        provider=provider_block(model),
     )
     return inst, res
 

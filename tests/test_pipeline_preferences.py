@@ -139,3 +139,24 @@ def test_pairs_api(client, world):
     assert summary == {"eligible": 0, "total": 2, "by_status": {"judged": 1, "tie": 1},
                        "flaws": {"wrong_fact": 1, "dismissive_tone": 1}, "strategies": {"corruptor": 2}}
     assert client.get("/api/projects/nope/pairs").status_code == 404
+
+
+async def test_provider_routing_for_corruptor_and_weaker(genie_home):
+    with db.session_scope() as s:
+        p = make_project(s, data_types=["sft", "dpo"], config={
+            "responses": {"ensemble": [{"slug": "anthropic/claude-sonnet-4", "provider_order": ["anthropic"]}]},
+            "preferences": {"weaker_model": {"slug": "meta-llama/llama-3.1-8b-instruct", "provider_order": ["together"]}},
+        })
+        leaves = seed_tree(s, p, leaves=1)
+        s.add_all([mk_row(p, leaves[0], 1), mk_row(p, leaves[0], 2)])
+        s.commit()
+    ctx = FakeCtx(p.id, 4)
+    ctx.script(lambda model, msgs, kw: CHOSEN + " Slightly different.")
+    with db.session_scope() as s:
+        items, _ = preferences.plan(p, {}, s)
+    assert (await preferences.handle(items[0], ctx)).status == "done"
+    assert ctx.calls[0]["provider"] == {"order": ["anthropic"], "allow_fallbacks": True}
+    ctx2 = FakeCtx(p.id, 4, params={"strategy": "weaker"})
+    ctx2.script(lambda model, msgs, kw: "weaker answer")
+    assert (await preferences.handle(items[1], ctx2)).status == "done"
+    assert ctx2.calls[0]["provider"] == {"order": ["together"], "allow_fallbacks": True}

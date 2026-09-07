@@ -166,3 +166,15 @@ def test_judge_summary_api(client, world):
     if r.status_code == 200:
         assert client.get(f"/api/projects/{p.id}/judge/summary").json()["same_family_warning"] is True
     assert client.get("/api/projects/nope/judge/summary").status_code == 404
+
+
+async def test_pinned_judge_provider_is_passed(world):
+    p, _, _ = world
+    ctx = FakeCtx(p.id, 5, params={"model": {"slug": "openai/gpt-4o", "provider_order": ["openai"]}})
+    ctx.script(lambda model, msgs, kw: {"criteria": {"Correctness": 4, "Actionability": 4, "Style adherence": 4, "Safety": 4},
+                                        "rationale": "ok", "verdict": "A"})
+    with db.session_scope() as s:
+        items, _ = judge.plan(p, {}, s)
+    for it in items:
+        assert (await judge.handle(it, ctx)).status == "done"
+    assert ctx.calls and all(c["provider"] == {"order": ["openai"], "allow_fallbacks": True} for c in ctx.calls)

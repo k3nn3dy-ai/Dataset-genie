@@ -152,6 +152,18 @@ def slot(cfg_slot: ModelSlot | dict) -> ModelSlot:
     return cfg_slot if isinstance(cfg_slot, ModelSlot) else ModelSlot.model_validate(cfg_slot)
 
 
+def provider_block(m: ModelSlot | None) -> dict[str, Any] | None:
+    """OpenRouter provider routing for a slot: `{"order": [...], "allow_fallbacks": bool}` when the
+    slot pins providers (or forbids fallbacks); None when the slot has no routing preference."""
+    if m is None:
+        return None
+    if m.provider_order:
+        return {"order": list(m.provider_order), "allow_fallbacks": bool(m.allow_fallbacks)}
+    if not m.allow_fallbacks:
+        return {"allow_fallbacks": False}
+    return None
+
+
 # ---------------------------------------------------------------- templates
 _env = Environment(
     loader=FileSystemLoader(str(PROMPTS_LIB)),

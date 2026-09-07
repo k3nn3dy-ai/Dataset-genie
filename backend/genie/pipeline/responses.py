@@ -20,6 +20,7 @@ from ._common import (
     call_cost,
     estimate_calls,
     project_config,
+    provider_block,
     render,
     rstrip_assistant,
     seeded_rng,
@@ -247,7 +248,7 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
         res = await ctx.call(
             target_id=prompt.id, model=teacher.slug, messages=messages,
             temperature=cfg.temperature if temperature is None else temperature,
-            max_tokens=cfg.max_tokens, tools=tools or None,
+            max_tokens=cfg.max_tokens, tools=tools or None, provider=provider_block(teacher),
         )
         results.append(res)
         return res
@@ -316,6 +317,7 @@ async def _multi_turn(ctx, teacher_turn, messages: list[dict], cfg: ResponsesCon
         sim_prompt = render("responses_simulated_user", mood=cfg.user_mood,
                             mood_guide=MOOD_GUIDE.get(cfg.user_mood, ""), transcript=_transcript(messages))
         res = await ctx.call(target_id=target_id, model=sim.slug, temperature=sim.temperature, max_tokens=min(sim.max_tokens, 400),
+                             provider=provider_block(sim),
                              messages=[{"role": "system", "content": sim_prompt},
                                        {"role": "user", "content": "Write the user's next message."}])
         results.append(res)
@@ -346,6 +348,7 @@ async def _tools_trajectory(ctx, teacher_turn, messages: list[dict], tools: list
                                 schema_json=json.dumps(_tool_schema(tools, name), indent=2),
                                 arguments=tc["function"]["arguments"], transcript=_transcript(messages))
             sres = await ctx.call(target_id=target_id, model=sim.slug, temperature=0.3, max_tokens=min(sim.max_tokens, 600),
+                                  provider=provider_block(sim),
                                   messages=[{"role": "system", "content": sim_prompt},
                                             {"role": "user", "content": "Return the tool's JSON result."}])
             results.append(sres)

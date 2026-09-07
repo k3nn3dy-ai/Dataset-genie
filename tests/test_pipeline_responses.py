@@ -237,3 +237,26 @@ async def test_tools_never_finishing_is_an_error(genie_home):
     assert res.status == "error" and "hops" in res.error
     with db.session_scope() as s:
         assert s.query(RowRecord).count() == 0
+
+
+async def test_pinned_provider_routing_reaches_every_call(world):
+    p, _, _, _ = world
+    ctx = FakeCtx(p.id, 3, params={
+        "ensemble": [{"slug": "anthropic/claude-sonnet-4", "provider_order": ["anthropic"], "allow_fallbacks": False}],
+        "simulated_user_model": {"slug": "openai/gpt-4o-mini", "provider_order": ["openai", "azure"]},
+        "multi_turn": True, "turns_min": 2, "turns_max": 2,
+    })
+    ctx.script(lambda model, msgs, kw: "Sure, next message please." if model == "openai/gpt-4o-mini"
+               else "Check the pod events with kubectl describe and read the last restart reason.")
+    with db.session_scope() as s:
+        items, _ = responses.plan(p, {}, s)
+    assert (await responses.handle(items[0], ctx)).status == "done"
+    teacher_calls = [c for c in ctx.calls if c["model"] == "anthropic/claude-sonnet-4"]
+    sim_calls = [c for c in ctx.calls if c["model"] == "openai/gpt-4o-mini"]
+    assert teacher_calls and all(c["provider"] == {"order": ["anthropic"], "allow_fallbacks": False} for c in teacher_calls)
+    assert sim_calls and all(c["provider"] == {"order": ["openai", "azure"], "allow_fallbacks": True} for c in sim_calls)
+    # an unpinned slot sends no provider block at all
+    ctx2 = FakeCtx(p.id, 3, params={"regenerate": True})
+    ctx2.script(lambda model, msgs, kw: "Check the pod events with kubectl describe and read the last restart reason.")
+    await responses.handle(items[1], ctx2)
+    assert ctx2.calls[0]["provider"] is None

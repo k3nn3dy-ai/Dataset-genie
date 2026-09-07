@@ -17,6 +17,7 @@ from ._common import (
     call_cost,
     estimate_calls,
     project_config,
+    provider_block,
     render,
     seeded_rng,
     slot,
@@ -36,6 +37,15 @@ def _cfg(project: Project, params: dict | None) -> PreferencesConfig:
 def _teacher_default(project: Project) -> ModelSlot:
     ens = project_config(project).responses.ensemble
     return slot(ens[0]) if ens else ModelSlot(slug="anthropic/claude-sonnet-4")
+
+
+def _teacher_slot(project: Project, teacher_slug: str) -> ModelSlot:
+    """The ensemble slot matching the row's teacher (carries provider routing), else a bare slot."""
+    for m in project_config(project).responses.ensemble:
+        m = slot(m)
+        if m.slug == teacher_slug:
+            return m
+    return ModelSlot(slug=teacher_slug)
 
 
 def model_slug(project: Project, params: dict | None) -> str | None:
@@ -94,6 +104,7 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
         pcfg = project_config(project)
         messages = list(row.messages or [])
         teacher_slug = (row.meta or {}).get("models", {}).get("responses") or _teacher_default(project).slug
+        teacher = _teacher_slot(project, teacher_slug)
         row_id = row.id
     if not messages or messages[-1].get("role") != "assistant":
         return ItemResult(status="error", error="row does not end on an assistant turn")
@@ -105,22 +116,22 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
 
     if cfg.strategy == "corruptor":
         flaw = sample_flaw(rng, cfg)
-        model, temperature = teacher_slug, pcfg.responses.temperature
+        model, temperature, provider = teacher_slug, pcfg.responses.temperature, provider_block(teacher)
         system = render("preferences_corruptor", flaw=flaw.name, instruction=flaw.instruction)
         user = f"## Conversation\n{_transcript(prompt_messages)}\n\n## Answer:\n{chosen}"
         call_messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     elif cfg.strategy == "weaker":
         weak = slot(cfg.weaker_model)
-        model, temperature = weak.slug, weak.temperature
+        model, temperature, provider = weak.slug, weak.temperature, provider_block(weak)
         call_messages = prompt_messages
     else:  # hightemp
-        model, temperature = teacher_slug, cfg.hightemp_temperature
+        model, temperature, provider = teacher_slug, cfg.hightemp_temperature, provider_block(teacher)
         call_messages = prompt_messages
 
     rejected = ""
     for attempt in range(2):
         res = await ctx.call(target_id=row_id, model=model, messages=call_messages, temperature=temperature,
-                             max_tokens=pcfg.responses.max_tokens)
+                             max_tokens=pcfg.responses.max_tokens, provider=provider)
         results.append(res)
         rejected = (res.content or "").rstrip()
         if rejected and rejected != chosen:

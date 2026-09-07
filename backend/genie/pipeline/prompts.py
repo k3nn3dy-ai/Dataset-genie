@@ -20,6 +20,7 @@ from ._common import (
     Estimate,
     call_cost,
     estimate_calls,
+    provider_block,
     render,
     seeded_rng,
     slot,
@@ -192,6 +193,7 @@ async def _generate(ctx, *, model, specs: list[PromptSpec], target_id: str, **tc
     inst, res = await ctx.call_structured(
         target_id=target_id, model=model.slug, messages=[{"role": "user", "content": text}],
         schema=PromptBatch, temperature=model.temperature, max_tokens=min(model.max_tokens, 120 * len(specs) + 200),
+        provider=provider_block(model),
     )
     prompts = inst.texts()[: len(specs)]
     return prompts, res

@@ -105,8 +105,19 @@ def _summary_counts(session: Session, project: Project) -> dict[str, Any]:
     leaves, target_rows = count_leaves(session, project.id)
     by_status = dict(session.execute(
         select(RowRecord.status, func.count()).where(RowRecord.project_id == project.id).group_by(RowRecord.status)).all())
+    refusal_rows = session.execute(
+        select(RowRecord.model_slug, RowRecord.leaf_id, func.count())
+        .where(RowRecord.project_id == project.id, RowRecord.status == "refusal")
+        .group_by(RowRecord.model_slug, RowRecord.leaf_id)
+    ).all()
+    refusals_by_model: dict[str, int] = {}
+    refusals_by_leaf: dict[str, int] = {}
+    for model, leaf_id, n in refusal_rows:
+        refusals_by_model[model or "unknown"] = refusals_by_model.get(model or "unknown", 0) + n
+        refusals_by_leaf[leaf_id or "unknown"] = refusals_by_leaf.get(leaf_id or "unknown", 0) + n
     return {
         "leaves": leaves, "target_rows": target_rows,
+        "refusals_by_model": refusals_by_model, "refusals_by_leaf": refusals_by_leaf,
         "rows": sum(by_status.values()),
         "pairs": _count(session, PairRecord, PairRecord.project_id == project.id),
         "refusals": by_status.get("refusal", 0),

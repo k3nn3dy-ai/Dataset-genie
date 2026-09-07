@@ -95,6 +95,7 @@ def test_summary_math_and_stage_statuses(client):
     assert body["leaves"] == 6 and body["target_rows"] == 24
     assert body["rows"] == 5 and body["pairs"] == 1 and body["refusals"] == 1 and body["filtered"] == 1
     assert body["accepted"] == 2 and body["spend_usd"] == 1.2345 and body["cap_usd"] == 15.0
+    assert body["refusals_by_model"] == {"unknown": 1} and body["refusals_by_leaf"] == {leaves[0].id: 1}
     stages = {st["stage"]: st for st in body["stages"]}
     assert [stages[n]["status"] for n in range(1, 9)] == ["done", "running", "failed", "todo", "todo", "todo", "done", "todo"]
     assert stages[1]["count"] == 6 and stages[3]["count"] == 5 and stages[4]["count"] == 1 and stages[7]["count"] == 2

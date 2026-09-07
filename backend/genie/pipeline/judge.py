@@ -18,6 +18,7 @@ from ._common import (
     call_cost,
     estimate_calls,
     project_config,
+    provider_block,
     render,
     seeded_rng,
     slot,
@@ -164,7 +165,7 @@ async def _judge_row(item: WorkItem, ctx, cfg: JudgeConfig, brief: str) -> ItemR
     user = "## Conversation\n" + _conversation(messages) + "\n\nScore the assistant's final reply."
     out, res = await ctx.call_structured(
         target_id=item.target_id, model=m.slug, schema=JudgeOutput, temperature=m.temperature,
-        max_tokens=min(m.max_tokens, 400),
+        max_tokens=min(m.max_tokens, 400), provider=provider_block(m),
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
     )
     try:
@@ -218,7 +219,7 @@ async def _judge_pair(item: WorkItem, ctx, cfg: JudgeConfig, brief: str) -> Item
             "\n\n## Response B\n" + b_text + "\n\nScore both responses and give your verdict.")
     out, res = await ctx.call_structured(
         target_id=item.target_id, model=m.slug, schema=PairJudgeOutput, temperature=m.temperature,
-        max_tokens=min(m.max_tokens, 600),
+        max_tokens=min(m.max_tokens, 600), provider=provider_block(m),
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
     )
     verdict_ab = out.verdict.upper()
