@@ -195,7 +195,15 @@ diffable.
   estimated cost and refuses to start it if `spend + reserved > cap`; the run ends with status
   `budget_stop`. In-flight calls finish and are billed; nothing half-written is left behind.
 - **Auto-stop at 90 %** (configurable) stops a run early so you decide what the last 10 % buys.
+- Only one run per project is active at a time (a second `RUN STAGE` gets a 409 pointing at the
+  running stage). The first call of a run goes alone to discover the real price; later calls
+  reserve at least the running average of actual costs, so many workers cannot overshoot the cap.
 - Cancelling a run is cooperative: workers finish the call they are on, then stop.
+- Interrupted runs come back as **paused**. Items that already made billed calls but did not
+  finish are reported as `partial` on `GET /api/runs/{id}` (with `pending` and `items_by_status`);
+  a plain **Resume** skips them, **Resume incl. partial** re-runs them and bills those calls again.
+- If OpenRouter ever omits `usage.cost`, the cost is computed from catalogue prices, else from a
+  built-in price table and flagged `cost_estimated` in the raw log; it is never silently zero.
 
 ## Judge scores never gate by default
 
