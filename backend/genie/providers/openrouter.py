@@ -489,8 +489,8 @@ class OpenRouterClient:
             stored = _load_settings().get("catalogue_ttl_hours")
             if isinstance(stored, (int, float)) and stored > 0:
                 hours = stored
-        except Exception:  # noqa: BLE001 - settings table unavailable: keep the env default
-            pass
+        except Exception as exc:  # noqa: BLE001 - settings table unavailable: keep the env default
+            log.debug("catalogue TTL: settings unavailable (%s); using default %sh", exc, hours)
         return float(hours) * 3600
 
     async def catalogue(self, force: bool = False) -> list[ModelInfo]:
