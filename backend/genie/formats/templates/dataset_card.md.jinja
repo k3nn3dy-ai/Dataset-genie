@@ -1,0 +1,115 @@
+---
+{{ front_matter }}
+---
+
+# {{ project.name }}
+
+Synthetic fine-tuning dataset generated with **Dataset Genie {{ version }}** on {{ created_at }}.
+
+{% if project.domain_brief %}
+## Domain brief
+
+{{ project.domain_brief }}
+
+{% endif %}
+## Files
+
+| Format | Trainer | Train rows | Eval rows |
+|---|---|---:|---:|
+{% for fmt in formats %}
+| `{{ fmt }}/` | {{ trainers[fmt] }} | {{ counts[fmt].train }} | {{ counts[fmt].eval }} |
+{% endfor %}
+
+Every file is JSON Lines: one UTF-8 JSON object per line, `\n` line endings, no `\u` escapes.
+Each row carries a stable top-level `id` ({{ '`<project>-<leaf>-<nnnn>`' }}){% if req.include_judge_scores %} and a
+`metadata` object with `leaf_path`, `difficulty`, `task_type`, `models`, `judge` and `flags`{% endif %}.
+Split: {{ '%.0f' | format((1 - req.eval_split) * 100) }} / {{ '%.0f' | format(req.eval_split * 100) }}
+stratified by **{{ req.stratify_by }}**, seed `{{ req.seed }}`.
+{% if req.validate_template %}
+Every conversation was validated against the **{{ req.validate_template }}** chat template before writing.
+{% endif %}
+
+## Provenance
+
+### Models per stage (OpenRouter slugs)
+
+| Stage | Model |
+|---|---|
+| taxonomy | `{{ models.taxonomy }}` |
+| prompts | `{{ models.prompts }}` |
+| responses | {% for m in models.responses %}`{{ m }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+{% if models.preferences is defined %}
+| preferences | `{{ models.preferences }}` |
+{% endif %}
+| judge | `{{ models.judge }}` |
+
+### Provider pinning
+
+| Slot | provider_order | allow_fallbacks |
+|---|---|---|
+{% for slot, p in provider_pinning.items() %}
+| {{ slot }} | {{ p.provider_order | join(', ') if p.provider_order else '(any)' }} | {{ p.allow_fallbacks }} |
+{% endfor %}
+
+### Judge rubric
+
+| Criterion | Weight | Description |
+|---|---:|---|
+{% for c in rubric %}
+| {{ c.name }} | {{ c.weight }} | {{ c.description }} |
+{% endfor %}
+
+Weighted score normalised to 0–5. Low-score threshold: {{ cfg.judge.low_score_threshold }}.
+{% if req.gate_on_score %}
+Rows scoring below **{{ req.gate_threshold }}** were excluded ({{ gated_out }} removed).
+{% else %}
+Judge scores are informational and did **not** gate this export; rows below
+{{ req.gate_threshold }} are kept and flagged `low_score` in their metadata.
+{% endif %}
+
+## Counts
+
+### By leaf
+
+| Leaf | Rows |
+|---|---:|
+{% for leaf, n in breakdown.leaf.items() %}
+| {{ leaf }} | {{ n }} |
+{% endfor %}
+
+### By difficulty
+
+| Difficulty | Rows |
+|---|---:|
+{% for d, n in breakdown.difficulty.items() %}
+| {{ d }} | {{ n }} |
+{% endfor %}
+
+## Filtering
+
+| Rule | Setting |
+|---|---|
+{% for rule, setting in filter_rules.items() %}
+| {{ rule }} | {{ setting }} |
+{% endfor %}
+
+Rows removed by filters:
+{% if removed %}
+{% for reason, n in removed.items() %}
+- {{ reason }}: {{ n }}
+{% endfor %}
+{% else %}
+- none
+{% endif %}
+
+Refusals held out of the dataset: {{ refusals }}.
+
+## Licence
+
+`{{ license }}`
+
+## Generation
+
+- Generated: {{ created_at }}
+- Dataset Genie version: {{ version }}
+- Reproduce with `genie run generation_config.yaml` (the config sits next to this card).
