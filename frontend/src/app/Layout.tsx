@@ -1,14 +1,30 @@
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useParams } from 'react-router-dom'
+import { Atmosphere } from './Atmosphere'
+import { Lattice } from './Lattice'
+import { Rail } from './Rail'
+import { useStore } from './store'
 
-// Placeholder shell. Track A replaces this with Rail + Header + Atmosphere + Lattice.
 export function Layout() {
+  const { projectId } = useParams()
+  const setActive = useStore((s) => s.setActiveProject)
+  useEffect(() => { if (projectId) setActive(projectId) }, [projectId, setActive])
+
   return (
-    <div className="min-h-full flex bg-bg text-text font-ui">
-      <aside className="w-[236px] shrink-0 border-r border-line p-4">
-        <div className="font-display font-bold uppercase text-cyan">Dataset Genie</div>
-        <div className="label mt-1">データセット・ジーニー</div>
-      </aside>
-      <main className="flex-1 p-8"><Outlet /></main>
+    <div className="relative min-h-screen bg-bg text-text font-ui">
+      <Atmosphere />
+      <div className="relative z-10 flex min-h-screen">
+        <Rail />
+        <main className="relative flex-1 min-w-0">
+          {/* Hazard stripe along the top of the main column */}
+          <div aria-hidden className="hazard h-[5px] w-full opacity-80 sticky top-0 z-30" />
+          {/* Lattice backdrop, fixed to the main column, masked under the title */}
+          <Lattice className="fixed top-0 bottom-0 left-[236px] right-0 z-0 pointer-events-none opacity-90" />
+          <div className="relative z-10 px-8 pt-6 pb-16 max-w-[1560px]">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
