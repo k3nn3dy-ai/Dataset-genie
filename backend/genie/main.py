@@ -19,6 +19,10 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     init_db()
+    # Runs left `running` by a crash become `paused` so the UI can offer Resume.
+    from .jobs.runner import runner
+
+    runner.mark_interrupted()
     yield
 
 
