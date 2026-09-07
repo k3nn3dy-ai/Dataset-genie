@@ -198,9 +198,9 @@ batch of 64, cosine via numpy; used by prompts near-dup guard and Filter near-du
 
 ## 9. CLI (`typer`)
 
-`genie serve [--port 8765]`, `genie run config.yaml [--stages 1-8] [--project-slug]`,
-`genie export <slug> --formats sft,dpo [--push]`, `genie models [--search]`,
-`genie secrets set openrouter|hf`. `run` reuses the same pipeline functions as the API with a
+`genie serve [--port 8765]`, `genie run config.yaml [--stages 1-8|1,2,3] [--name]`,
+`genie export <slug> --formats sft,dpo [--push --repo user/name --private/--public --license --tag]`,
+`genie models [--search]`, `genie secrets set openrouter|huggingface`, `genie secrets status`. `run` reuses the same pipeline functions as the API with a
 console progress renderer subscribed to `RunEvents`.
 
 ## 10. API surface (all under `/api`)

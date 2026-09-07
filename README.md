@@ -25,7 +25,7 @@ SQLite database so nothing is a black box.
 | ![Review](docs/screenshots/08-review.png) | ![Export](docs/screenshots/09-export.png) | ![Settings](docs/screenshots/10-settings.png) |
 | 07 Review | 08 Export | Settings |
 
-Regenerate with `make seed-demo && make dev` in one terminal and `make screenshots` in another.
+All captures are of the seeded demo project against the real backend. Regenerate with `make seed-demo && make dev` in one terminal and `make screenshots` in another (the script talks to Vite on `127.0.0.1:5173`, which proxies `/api` to the backend on `:8765`; if the backend is down it falls back to the UI's `?mock=1` data).
 
 ## Quickstart
 
