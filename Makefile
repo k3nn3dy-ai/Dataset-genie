@@ -1,10 +1,12 @@
 .PHONY: dev backend frontend build test test-py test-fe lint screenshots seed-demo install
 
-PY := uv run
+PY := uv run --no-sync
 
 install:
 	uv venv --python 3.11 .venv || true
 	uv pip install -e ".[dev]"
+	@chflags nohidden .venv/lib/python3.11/site-packages/*.pth 2>/dev/null || true
+	@echo "$(CURDIR)/backend" > .venv/lib/python3.11/site-packages/genie_dev.pth
 	cd frontend && npm install
 
 dev: ## backend (reload) + vite with /api proxy
