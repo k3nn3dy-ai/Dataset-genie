@@ -3,10 +3,12 @@
 PY := uv run --no-sync
 
 install:
-	uv venv --python 3.11 .venv || true
+	@mkdir -p $(HOME)/.venvs
+	@test -d $(HOME)/.venvs/dataset-genie || uv venv --python 3.11 $(HOME)/.venvs/dataset-genie
+	@test -e .venv || ln -s $(HOME)/.venvs/dataset-genie .venv
 	uv pip install -e ".[dev]"
-	@chflags nohidden .venv/lib/python3.11/site-packages/*.pth 2>/dev/null || true
-	@echo "$(CURDIR)/backend" > .venv/lib/python3.11/site-packages/genie_dev.pth
+	@chflags nohidden $(HOME)/.venvs/dataset-genie/lib/python3.11/site-packages/*.pth 2>/dev/null || true
+	@echo "$(CURDIR)/backend" > $(HOME)/.venvs/dataset-genie/lib/python3.11/site-packages/genie_dev.pth
 	cd frontend && npm install
 
 dev: ## backend (reload) + vite with /api proxy
@@ -34,9 +36,9 @@ lint:
 	$(PY) ruff check backend tests
 	cd frontend && npx tsc -b
 
-seed-demo: ## demo project with realistic fake data for screenshots
+seed-demo: ## demo project "Linux Incident Triage" with realistic fake data (idempotent; honours GENIE_HOME)
 	$(PY) python scripts/seed_demo.py
 
-screenshots: ## Playwright captures of all screens into docs/screenshots
+screenshots: ## Playwright captures of all 11 screens into docs/screenshots (needs `make dev` running; falls back to ?mock=1)
 	cd frontend && npx playwright install chromium >/dev/null 2>&1 || true
-	cd frontend && npx tsx ../scripts/screenshots.ts
+	cd frontend && npx -y tsx ../scripts/screenshots.ts
