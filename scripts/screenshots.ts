@@ -8,6 +8,7 @@
  *   PROJECT    project id or slug to shoot (default: the seeded "linux-incident-triage")
  *   MOCK=1     force `?mock=1` (frontend mock layer) even if the backend answers
  *   OUT_DIR    default <repo>/docs/screenshots
+ *   ONLY       comma-separated file stems to (re)shoot, e.g. ONLY=08-review,kit
  *
  * If the backend is unreachable the script falls back to `?mock=1` automatically.
  */
@@ -26,6 +27,7 @@ const WANT_PROJECT = process.env.PROJECT ?? 'linux-incident-triage'
 const FORCE_MOCK = process.env.MOCK === '1'
 const WIDTH = 1600
 const HEIGHT = 1000
+const ONLY = new Set((process.env.ONLY ?? '').split(',').map((s) => s.trim()).filter(Boolean))
 const SETTLE_MS = Number(process.env.SETTLE_MS ?? 900) // let the lattice / glitch / rain reach a steady frame
 
 const STAGE_FILES: Record<number, string> = {
@@ -73,6 +75,7 @@ async function settle(page: Page) {
 }
 
 async function shoot(page: Page, path: string, file: string, mock: boolean) {
+  if (ONLY.size && !ONLY.has(file)) return
   const url = `${BASE_URL}${path}${mock ? (path.includes('?') ? '&' : '?') + 'mock=1' : ''}`
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
   await settle(page)
@@ -108,7 +111,7 @@ async function main() {
     console.warn(`\n${consoleErrors.length} console error(s) during capture:`)
     for (const e of [...new Set(consoleErrors)].slice(0, 20)) console.warn('  - ' + e.slice(0, 300))
   }
-  console.log(`\nwrote 11 screenshots to ${OUT_DIR}`)
+  console.log(`\nwrote ${ONLY.size || 11} screenshots to ${OUT_DIR}`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
