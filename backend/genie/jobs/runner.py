@@ -332,7 +332,7 @@ class Runner:
             cap, stop_at = project.budget_cap_usd, project.stop_at_pct
             cfg_conc = (project.config or {}).get("concurrency") if isinstance(project.config, dict) else None
         conc = int(concurrency or cfg_conc or 8)
-        self._launch(run_id, project_id, stage, params or {}, handler, cap, stop_at, conc, client)
+        self._launch_or_fail(run_id, project_id, stage, params or {}, handler, cap, stop_at, conc, client)
         return run_id
 
     async def resume(self, run_id: str, handler: Handler, *, client: Any | None = None,
@@ -363,7 +363,21 @@ class Runner:
             cfg_conc = (project.config or {}).get("concurrency") if isinstance(project.config, dict) else None
             prior_spend = float(run.spend_usd or 0.0)
         conc = int(concurrency or cfg_conc or 8)
-        self._launch(run_id, project_id, stage, params, handler, cap, stop_at, conc, client, prior_spend)
+        self._launch_or_fail(run_id, project_id, stage, params, handler, cap, stop_at, conc, client,
+                             prior_spend)
+
+    def _launch_or_fail(self, run_id: str, *args: Any, **kwargs: Any) -> None:
+        """Rows for `run_id` already exist: if launching fails, never leave a `queued` orphan."""
+        try:
+            self._launch(run_id, *args, **kwargs)
+        except Exception as exc:
+            with session_scope() as s:
+                run = s.get(Run, run_id)
+                if run is not None:
+                    run.status = "failed"
+                    run.error_message = _errstr(exc)
+                    run.finished_at = time.time()
+            raise
 
     def _launch(self, run_id: str, project_id: str, stage: int, params: dict, handler: Handler,
                 cap: float, stop_at: int, concurrency: int, client: Any | None,

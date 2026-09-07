@@ -316,3 +316,20 @@ async def test_start_without_key_raises_before_writing_a_run(project):
         secrets.set_backend_for_tests(None)
     with session_scope() as s:
         assert s.query(Run).count() == 0 and s.query(RunItem).count() == 0
+
+
+async def test_launch_failure_marks_run_failed_not_queued(project, monkeypatch):
+    from genie.jobs import runner as runner_mod
+
+    def boom(*a, **k):
+        raise RuntimeError("guard init exploded")
+
+    monkeypatch.setattr(runner_mod, "BudgetGuard", boom)
+    with pytest.raises(RuntimeError):
+        await Runner().start(project_id=project, stage=1, params={}, items=items(2), handler=ok_handler,
+                             model_slug=None, est_usd=0.0, client=FakeClient())
+    with session_scope() as s:
+        runs = s.query(Run).all()
+        assert len(runs) == 1 and runs[0].status == "failed"
+        assert "guard init exploded" in runs[0].error_message and runs[0].finished_at is not None
+        assert s.query(Run).filter_by(status="queued").count() == 0
