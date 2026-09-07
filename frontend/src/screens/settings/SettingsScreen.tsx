@@ -5,6 +5,8 @@ import type { SettingsData } from '../../lib/viewtypes'
 import { usePutSettings, useRefreshModels, useSettings } from '../../lib/queries'
 import { Banner, Button, ErrorState, Field, Input, ModelPicker, NumberInput, Panel, Select, Slider, Spinner, Toggle } from '../../components'
 import { SecretRow } from './SecretRow'
+import { useStore } from '../../app/store'
+import { useModels } from '../../lib/queries'
 
 const STAGE_SLOTS: { key: keyof SettingsData['default_models']; label: string; kana: string }[] = [
   { key: 'taxonomy', label: 'Stage 01 · Taxonomy', kana: '分類' }, { key: 'prompts', label: 'Stage 02 · Prompts', kana: 'プロンプト' }, { key: 'responses', label: 'Stage 03 · Teacher', kana: '応答' },
@@ -17,6 +19,8 @@ export function SettingsScreen() {
   const put = usePutSettings()
   const refresh = useRefreshModels()
   const [draft, setDraft] = useState<SettingsData | null>(null)
+  useModels('')
+  const modelsWarning = useStore((s) => s.modelsWarning)
   useEffect(() => { if (settings.data && !draft) setDraft(settings.data) }, [settings.data, draft])
   const dirty = !!draft && !!settings.data && JSON.stringify(draft) !== JSON.stringify(settings.data)
   const set = (p: Partial<SettingsData>) => setDraft((d) => (d ? { ...d, ...p } : d))
@@ -56,6 +60,7 @@ export function SettingsScreen() {
             </Panel>
           </div>
           <Panel title="Default model per stage" kana="既定" actions={<Button size="sm" variant="outline" icon="refresh" loading={refresh.isPending} onClick={() => refresh.mutate()}>Refresh catalogue</Button>}>
+            {modelsWarning && <Banner tone="amber" className="mb-4">{modelsWarning}</Banner>}
             <div className="grid grid-cols-2 gap-4">
               {STAGE_SLOTS.map((s) => (
                 <div key={s.key} className="rounded-card border border-line bg-bg/40 p-3">

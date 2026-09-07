@@ -7,6 +7,7 @@ import { Icon } from './Icon'
 import { Input, NumberInput, Select } from './Fields'
 import { Slider } from './Slider'
 import { Toggle } from './Toggle'
+import { useStore } from '../app/store'
 
 const PROVIDERS = ['', 'anthropic', 'openai', 'google', 'together', 'fireworks', 'deepinfra', 'groq', 'azure', 'amazon-bedrock']
 
@@ -25,6 +26,7 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
   const [adv, setAdv] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const models = useModels('')
+  const warning = useStore((s) => s.modelsWarning)
   const list = useMemo(() => {
     const n = q.trim().toLowerCase()
     const all = models.data ?? []
@@ -81,7 +83,7 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
                   <span className="font-mono text-[11px] text-muted tabular-nums text-right">{contextK(m.context_length)}</span>
                 </button>
               ))}
-              {list.length === 0 && <div className="px-3 py-6 text-center text-dim font-mono text-[11px]">{(models.data ?? []).length === 0 ? 'Catalogue empty — set an OpenRouter key in Settings, then Refresh catalogue. You can still type a slug below.' : 'No models match'}</div>}
+              {list.length === 0 && <div className="px-3 py-6 text-center text-dim font-mono text-[11px]">{(models.data ?? []).length === 0 ? (warning ?? 'Catalogue empty — set an OpenRouter key in Settings, then Refresh catalogue.') + ' You can still type a slug below.' : 'No models match'}</div>}
             </div>
           </div>
         )}

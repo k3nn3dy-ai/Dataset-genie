@@ -1,8 +1,9 @@
 // Real API implementation of DataApi. Adapts server shapes (see backend/genie/api/*.py) to the view types.
-import { api, subscribeRun } from './api'
+import { ApiError, api, subscribeRun } from './api'
 import type { Message, ModelSlot, Pair, Paged, Project, TopicNode } from './types'
 import type { ExportRecord, FilterRuleSummary, FilterSummary, HFStatus, JudgeSummary, Preset, PromptItem, RawCall, RefusalCell, ReviewStats, RowItem, SettingsData } from './viewtypes'
 import type { DataApi, RowAction, RowQuery } from './data'
+import { useStore } from '../app/store'
 
 const qs = (o: Record<string, unknown>): string => {
   const p = new URLSearchParams()
@@ -147,7 +148,12 @@ export const realApi: DataApi = {
   listExports: async (id) => (await api.get<SrvExport[]>(`/projects/${id}/exports`)).map(toExport),
   hfStatus: (id) => api.get<HFStatus>(`/projects/${id}/hf/status`),
   reviewStats: (id) => api.get<ReviewStats>(`/projects/${id}/review/stats`),
-  models: (q) => api.get(`/models/${qs({ q })}`),
+  models: async (q) => {
+    const res = await fetch(`/api/models/${qs({ q })}`)
+    if (!res.ok) throw new ApiError(res.status, res.statusText)
+    useStore.getState().setModelsWarning(res.headers.get('x-genie-warning'))
+    return res.json()
+  },
   refreshModels: () => api.get('/models/refresh'),
   getSettings: async () => toSettings(await api.get<SrvSettings>('/settings/')),
   putSettings: async (s) => toSettings(await api.put<SrvSettings>('/settings/', fromSettings(s))),

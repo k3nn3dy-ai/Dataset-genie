@@ -121,6 +121,11 @@ export function MonoTable<T>({ rows, columns, rowKey, onRowClick, activeKey, sel
   )
 }
 
+/** Truncating text cell (block + ellipsis) so wide tables fit their panel. */
+export function TextCell({ text, max = 260, className }: { text: string; max?: number; className?: string }) {
+  return <span className={clsx('block truncate', className)} style={{ maxWidth: max }} title={text}>{text}</span>
+}
+
 /** Truncating id cell with the full id on hover. */
 export function IdCell({ id, max = 230, className }: { id: string; max?: number; className?: string }) {
   return <span className={clsx('block truncate text-cyan/90', className)} style={{ maxWidth: max }} title={id}>{id}</span>

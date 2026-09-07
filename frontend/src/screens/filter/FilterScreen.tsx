@@ -5,8 +5,7 @@ import type { FilterRuleSummary } from '../../lib/viewtypes'
 import { useFilterSummary, useRestoreRows, useRows, useRunFilter } from '../../lib/queries'
 import { StageScreen } from '../shared/StageScreen'
 import { useConfigSection } from '../shared/useConfigSection'
-import { Button, Chip, EmptyState, Field, IdCell, Input, MonoTable, NumberInput, Panel, Slider, Spinner, StatTile, Tabs, Toggle, toneFor } from '../../components'
-import { truncate } from '../../lib/format'
+import { Button, Chip, EmptyState, Field, IdCell, Input, MonoTable, TextCell, NumberInput, Panel, Slider, Spinner, StatTile, Tabs, Toggle, toneFor } from '../../components'
 
 const RULE_KEYS: FilterRuleSummary['name'][] = ['exact_dup', 'near_dup', 'refusal', 'pii', 'length', 'language']
 const RULE_LABEL: Record<FilterRuleSummary['name'], string> = { exact_dup: 'Exact duplicate', near_dup: 'Near duplicate', refusal: 'Refusal → bucket', pii: 'PII', length: 'Length bounds', language: 'Language' }
@@ -69,9 +68,9 @@ export function FilterScreen() {
       {tab === 'refusals' && <div className="font-mono text-[10.5px] text-amber/80">Refusals are kept, not deleted: useful as negative examples, or restore any the detector got wrong.</div>}
       <MonoTable rows={list} rowKey={(r) => r.metadata.id} selectable selected={sel} onSelectedChange={setSel} maxHeight="60vh"
         columns={[
-          { key: 'id', header: 'id', render: (r) => <IdCell id={r.metadata.id} />, sortValue: (r) => r.metadata.id },
-          { key: 'reason', header: 'reason', render: (r) => { const rule = r.status === 'refusal' ? 'refusal' : (r.filter_reason ?? 'filtered').split(':')[0]; const detail = r.status === 'refusal' ? 'short-answer heuristic' : (r.filter_reason ?? '').split(':').slice(1).join(':').trim(); return <span className="flex items-center gap-2"><Chip tone={toneFor(rule)}>{rule}</Chip><span className="text-muted">{truncate(detail, 46)}</span></span> }, sortValue: (r) => r.filter_reason ?? r.status },
-          { key: 'excerpt', header: 'excerpt', render: (r) => <span className="text-text/75">{truncate((r.messages.find((m) => m.role === 'assistant')?.content ?? '').replace(/\*\*/g, ''), 48)}</span> },
+          { key: 'id', header: 'id', render: (r) => <IdCell id={r.metadata.id} max={170} />, sortValue: (r) => r.metadata.id },
+          { key: 'reason', header: 'reason', render: (r) => { const rule = r.status === 'refusal' ? 'refusal' : (r.filter_reason ?? 'filtered').split(':')[0]; const detail = r.status === 'refusal' ? 'short-answer heuristic' : (r.filter_reason ?? '').split(':').slice(1).join(':').trim(); return <span className="flex items-center gap-2"><Chip tone={toneFor(rule)}>{rule}</Chip><TextCell max={120} className="text-muted" text={detail} /></span> }, sortValue: (r) => r.filter_reason ?? r.status },
+          { key: 'excerpt', header: 'excerpt', render: (r) => <TextCell max={150} className="text-text/75" text={(r.messages.find((m) => m.role === 'assistant')?.content ?? '').replace(/\*\*/g, '').replace(/\n+/g, ' ')} /> },
           { key: 'act', header: '', align: 'right', render: (r) => <Button size="sm" variant="outline" icon="refresh" onClick={() => restore.mutate([r.metadata.id])}>Restore</Button> },
         ]} />
     </div>

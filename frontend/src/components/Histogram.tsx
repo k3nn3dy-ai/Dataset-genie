@@ -9,7 +9,7 @@ export function Histogram({ bins, threshold, height = 140, className, mean }: { 
   const W = 400
   const H = height
   const padB = 22
-  const padT = 10
+  const padT = 30
   const bw = W / n
   const x = (v: number) => (v / 5) * W
   return (
@@ -35,13 +35,13 @@ export function Histogram({ bins, threshold, height = 140, className, mean }: { 
         {threshold !== undefined && (
           <g>
             <line x1={x(threshold)} x2={x(threshold)} y1={padT - 4} y2={H - padB + 4} stroke="#ffb020" strokeWidth={1.5} strokeDasharray="4 3" />
-            <text x={x(threshold) + 4} y={padT + 8} fill="#ffb020" fontFamily="Share Tech Mono" fontSize={10}>THR {threshold.toFixed(1)}</text>
+            <text x={x(threshold) + 4} y={padT - 18} fill="#ffb020" fontFamily="Share Tech Mono" fontSize={10}>THR {threshold.toFixed(1)}</text>
           </g>
         )}
         {mean !== undefined && (
           <g>
-            <line x1={x(mean)} x2={x(mean)} y1={padT} y2={H - padB} stroke="#ff2bd6" strokeWidth={1} />
-            <text x={x(mean) + 4} y={padT + 22} fill="#ff2bd6" fontFamily="Share Tech Mono" fontSize={10} textAnchor={mean > 4 ? 'end' : 'start'} dx={mean > 4 ? -8 : 0}>MEAN {mean.toFixed(2)}</text>
+            <line x1={x(mean)} x2={x(mean)} y1={padT - 4} y2={H - padB} stroke="#ff2bd6" strokeWidth={1} />
+            <text x={x(mean) + 4} y={padT - 6} fill="#ff2bd6" fontFamily="Share Tech Mono" fontSize={10} textAnchor={mean > 4.2 ? 'end' : 'start'} dx={mean > 4.2 ? -8 : 0}>MEAN {mean.toFixed(2)}</text>
           </g>
         )}
         {[0, 1, 2, 3, 4, 5].map((t) => (

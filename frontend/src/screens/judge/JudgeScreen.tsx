@@ -2,8 +2,8 @@ import { useParams } from 'react-router-dom'
 import { useJudgeSummary, useRows } from '../../lib/queries'
 import { StageScreen } from '../shared/StageScreen'
 import { useConfigSection } from '../shared/useConfigSection'
-import { Banner, Button, Chip, EmptyState, Histogram, IconButton, IdCell, Input, ModelPicker, MonoTable, Panel, Slider, Spinner, StatTile, Toggle, toneFor } from '../../components'
-import { modelFamily, truncate } from '../../lib/format'
+import { Banner, Button, Chip, EmptyState, Histogram, IconButton, IdCell, Input, ModelPicker, MonoTable, TextCell, Panel, Slider, Spinner, StatTile, Toggle, toneFor } from '../../components'
+import { modelFamily } from '../../lib/format'
 
 export function JudgeScreen() {
   const { projectId } = useParams()
@@ -68,10 +68,10 @@ export function JudgeScreen() {
       <MonoTable rows={items} rowKey={(r) => r.metadata.id} maxHeight="300px" defaultSort={{ key: 'score', dir: 'asc' }}
         rowTone={(r) => ((r.metadata.judge?.score ?? 5) < (draft?.low_score_threshold ?? 3) ? 'amber' : 'default')}
         columns={[
-          { key: 'id', header: 'id', render: (r) => <IdCell id={r.metadata.id} max={200} />, sortValue: (r) => r.metadata.id },
+          { key: 'id', header: 'id', render: (r) => <IdCell id={r.metadata.id} max={150} />, sortValue: (r) => r.metadata.id },
           { key: 'score', header: 'score', align: 'right', render: (r) => <span className={(r.metadata.judge?.score ?? 0) < (draft?.low_score_threshold ?? 3) ? 'text-amber' : 'text-acid'}>{r.metadata.judge?.score.toFixed(1)}</span>, sortValue: (r) => r.metadata.judge?.score ?? 0 },
-          ...(draft?.rubric ?? []).map((c) => ({ key: c.name, header: c.name.slice(0, 6), align: 'right' as const, render: (r: typeof items[number]) => <span className="text-muted">{r.metadata.judge?.criteria[c.name] ?? '—'}</span> })),
-          { key: 'rationale', header: 'rationale', render: (r) => <span className="text-text/75" title={r.metadata.judge?.rationale}>{truncate(r.metadata.judge?.rationale ?? '', 40)}</span> },
+          ...(draft?.rubric ?? []).slice(0, 4).map((c) => ({ key: c.name, header: <span title={c.name}>{c.name.slice(0, 4)}</span>, align: 'right' as const, render: (r: typeof items[number]) => <span className="text-muted">{r.metadata.judge?.criteria[c.name] ?? '—'}</span> })),
+          { key: 'rationale', header: 'rationale', render: (r) => <TextCell max={150} className="text-text/75" text={r.metadata.judge?.rationale ?? ''} /> },
           { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1">{r.metadata.flags.map((f) => <Chip key={f} tone={toneFor(f)}>{f}</Chip>)}</div> },
         ]} />
     </div>

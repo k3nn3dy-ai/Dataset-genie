@@ -16,9 +16,12 @@ interface Props {
   cap: number
   stageTitle: string
   running?: boolean
+  runError?: { status: number; message: string; kind: 'nokey' | 'overcap' | 'nothing' | 'other' } | null
+  onForce?: () => void
+  onSettings?: () => void
 }
 
-export function EstimateModal({ open, onClose, onConfirm, estimate, loading, error, spend, cap, stageTitle, running }: Props) {
+export function EstimateModal({ open, onClose, onConfirm, estimate, loading, error, spend, cap, stageTitle, running, runError, onForce, onSettings }: Props) {
   const after = spend + (estimate?.est_usd ?? 0)
   const pctAfter = cap > 0 ? (after / cap) * 100 : 0
   const over = estimate?.over_cap || after > cap
@@ -27,10 +30,18 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
       footer={(
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          {runError?.kind === 'overcap' && onForce && <Button variant="danger" icon="warning" loading={running} onClick={onForce} data-testid="force-run">Run anyway (force)</Button>}
           <Button variant="primary" icon="play" disabled={!estimate || over || loading} loading={running} onClick={onConfirm} data-testid="confirm-run">Run stage</Button>
         </>
       )}
     >
+      {runError && (
+        <Banner tone={runError.kind === 'nothing' ? 'cyan' : runError.kind === 'overcap' ? 'amber' : 'red'} className="mb-4">
+          {runError.kind === 'nokey' ? <>No OpenRouter API key is set. {onSettings && <button type="button" className="underline text-cyan" onClick={onSettings}>Set your key in Settings</button>} and try again.</>
+            : runError.kind === 'overcap' ? <>The server refused: this run would exceed the budget cap ({runError.message}). You can force it — the cap is still enforced per call.</>
+            : runError.message}
+        </Banner>
+      )}
       {loading && <Spinner label="Estimating cost" />}
       {!loading && error !== undefined && error !== null && <Banner tone="red">Estimate failed: {error instanceof Error ? error.message : String(error)}</Banner>}
       {estimate && !loading && (

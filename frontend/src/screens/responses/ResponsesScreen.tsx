@@ -4,11 +4,10 @@ import type { RowItem } from '../../lib/viewtypes'
 import { usePrompts, useRefusalMatrix, useRows } from '../../lib/queries'
 import { StageScreen } from '../shared/StageScreen'
 import { useConfigSection } from '../shared/useConfigSection'
-import { Chip, EmptyState, IdCell, Modal, MonoTable, Panel, Spinner, StatTile, toneFor } from '../../components'
+import { Chip, EmptyState, IdCell, Modal, MonoTable, TextCell, Panel, Spinner, StatTile, toneFor } from '../../components'
 import { EnsembleEditor, MultiTurnPanel, SystemPromptPanel } from './ResponsesConfig'
 import { RefusalHeatmap } from './RefusalHeatmap'
 import { Conversation } from '../shared/Conversation'
-import { truncate } from '../../lib/format'
 
 export function ResponsesScreen() {
   const { projectId } = useParams()
@@ -47,7 +46,7 @@ export function ResponsesScreen() {
           { key: 'id', header: 'id', render: (r) => <IdCell id={r.metadata.id} />, sortValue: (r) => r.metadata.id },
           { key: 'model', header: 'teacher', render: (r) => <span className="text-muted">{r.metadata.models.responses.split('/')[1]}</span>, sortValue: (r) => r.metadata.models.responses },
           { key: 'turns', header: 'turns', align: 'right', render: (r) => r.messages.filter((m) => m.role === 'assistant').length, sortValue: (r) => r.messages.length },
-          { key: 'excerpt', header: 'assistant excerpt', render: (r) => <span className="text-text/80">{truncate((r.messages.find((m) => m.role === 'assistant')?.content ?? '').replace(/\*\*/g, ''), 52)}</span> },
+          { key: 'excerpt', header: 'assistant excerpt', render: (r) => <TextCell max={240} className="text-text/80" text={(r.messages.find((m) => m.role === 'assistant')?.content ?? '').replace(/\*\*/g, '').replace(/\n+/g, ' ')} /> },
           { key: 'status', header: 'status', render: (r) => <Chip tone={toneFor(r.status)}>{r.status}</Chip>, sortValue: (r) => r.status },
         ]}
       />

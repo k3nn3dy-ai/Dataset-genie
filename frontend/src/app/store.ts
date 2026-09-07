@@ -17,10 +17,12 @@ interface UIState {
   mock: boolean
   mockReason: string | null
   sseError: boolean
+  modelsWarning: string | null
   setActiveProject: (id: string | null) => void
   setActiveRun: (projectId: string, stage: number, runId: string | null) => void
   setMock: (on: boolean, reason?: string) => void
   setSseError: (v: boolean) => void
+  setModelsWarning: (v: string | null) => void
 }
 
 export const useStore = create<UIState>((set) => ({
@@ -29,6 +31,7 @@ export const useStore = create<UIState>((set) => ({
   mock: initialMock(),
   mockReason: initialMock() ? 'forced' : null,
   sseError: false,
+  modelsWarning: null,
   setActiveProject: (id) => set({ activeProjectId: id }),
   setActiveRun: (projectId, stage, runId) => set((s) => {
     const next = { ...s.activeRuns }
@@ -39,6 +42,7 @@ export const useStore = create<UIState>((set) => ({
   }),
   setMock: (on, reason) => set({ mock: on, mockReason: on ? (reason ?? 'forced') : null }),
   setSseError: (v) => set({ sseError: v }),
+  setModelsWarning: (v) => set({ modelsWarning: v }),
 }))
 
 export const runKey = (projectId: string, stage: number): string => `${projectId}:${stage}`

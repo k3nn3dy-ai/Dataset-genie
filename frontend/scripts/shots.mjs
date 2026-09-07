@@ -22,7 +22,7 @@ const routes = [
   ['settings', '/settings'],
   ['empty-project', '/p/p_grafana/3'],
 ]
-const OUT = REAL ? '.screens/real' : '.screens'
+const OUT = REAL ? '.screens-real' : '.screens'
 mkdirSync(OUT, { recursive: true })
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })

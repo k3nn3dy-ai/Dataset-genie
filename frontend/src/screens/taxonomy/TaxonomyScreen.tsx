@@ -64,7 +64,9 @@ export function TaxonomyScreen() {
           </div>
           <Button size="sm" variant={dirty ? 'primary' : 'ghost'} icon="check" disabled={!dirty} loading={put.isPending} onClick={save}>Save tree</Button>
         </div>
-        <TreeEditor tree={tree} onChange={edit} taskTypes={draft?.task_types ?? ['TRIAGE']} depth={draft?.depth ?? 3} />
+        <div className="max-h-[calc(100vh-380px)] min-h-[240px] overflow-y-auto pr-1">
+          <TreeEditor tree={tree} onChange={edit} taskTypes={draft?.task_types ?? ['TRIAGE']} depth={draft?.depth ?? 3} />
+        </div>
       </div>
     )
   ) : <Spinner />

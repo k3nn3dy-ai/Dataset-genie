@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import type { RowItem } from '../../lib/viewtypes'
 import { useBulkRows, useRows, useTaxonomy } from '../../lib/queries'
 import { StageScreen } from '../shared/StageScreen'
-import { Button, Chip, EmptyState, IdCell, Input, MonoTable, Panel, Select, Slider, Spinner, StatTile, toneFor } from '../../components'
+import { Button, Chip, EmptyState, IdCell, Input, MonoTable, TextCell, Panel, Select, Slider, Spinner, StatTile, toneFor } from '../../components'
 import { RowDrawer } from './RowDrawer'
 import { flattenLeaves } from '../../lib/mock/project'
 import { truncate } from '../../lib/format'
@@ -76,7 +76,7 @@ export function ReviewScreen() {
         columns={[
           { key: 'id', header: 'id', render: (r: RowItem) => <IdCell id={r.metadata.id} max={210} />, sortValue: (r) => r.metadata.id },
           { key: 'leaf', header: 'leaf', render: (r) => <span className="text-muted">{truncate(r.metadata.leaf_path.at(-1) ?? '', 22)}</span>, sortValue: (r) => r.metadata.leaf_path.at(-1) ?? '' },
-          { key: 'prompt', header: 'prompt excerpt', render: (r) => <span className="text-text/80">{truncate((r.messages.find((m) => m.role === 'user')?.content ?? '').replace(/\n+/g, ' '), 44)}</span> },
+          { key: 'prompt', header: 'prompt excerpt', render: (r) => <TextCell max={220} className="text-text/80" text={(r.messages.find((m) => m.role === 'user')?.content ?? '').replace(/\n+/g, ' ')} /> },
           { key: 'score', header: 'score', align: 'right', width: '60px', render: (r) => <span className={(r.metadata.judge?.score ?? 5) < 3 ? 'text-amber' : 'text-acid'}>{r.metadata.judge?.score.toFixed(1) ?? '—'}</span>, sortValue: (r) => r.metadata.judge?.score ?? -1 },
           { key: 'status', header: 'status', width: '90px', render: (r) => <Chip tone={toneFor(r.status)}>{r.status}</Chip>, sortValue: (r) => r.status },
           { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1 flex-wrap">{r.metadata.flags.map((f) => <Chip key={f} tone={toneFor(f)}>{f}</Chip>)}</div> },

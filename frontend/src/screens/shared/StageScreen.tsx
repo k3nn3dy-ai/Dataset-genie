@@ -7,6 +7,7 @@ import { STAGES, type StageNumber } from '../../lib/types'
 import { useEstimate, useRunStage, useSummary } from '../../lib/queries'
 import { pad2 } from '../../lib/format'
 import { Button, EmptyState, ErrorState, EstimateModal, RunMonitor, Spinner } from '../../components'
+import { ApiError } from '../../lib/api'
 import type { RunStatus } from '../../lib/types'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -32,6 +33,17 @@ interface Props {
 }
 
 /** Two-column stage screen: header + estimate→run flow + config (left) + RunMonitor with results (right). */
+/** Turn a failed POST /stages/{n}/run into a user-facing message + action. */
+export function describeRunError(e: unknown): { status: number; message: string; kind: 'nokey' | 'overcap' | 'nothing' | 'other' } | null {
+  if (!e) return null
+  const status = e instanceof ApiError ? e.status : 0
+  const d = e instanceof ApiError ? e.detail : null
+  const message = typeof d === 'string' ? d : d && typeof d === 'object' && 'message' in d ? String((d as { message: unknown }).message) : e instanceof Error ? e.message : 'Run failed to start'
+  const low = message.toLowerCase()
+  const kind = status === 409 ? 'overcap' : low.includes('key') ? 'nokey' : low.includes('nothing') ? 'nothing' : 'other'
+  return { status, message, kind }
+}
+
 export function StageScreen({ stage, config, results, resultsCount, params, runLabel = 'Run stage', noRun, extraActions, blocked, loading, error, onRetry, subtitle, configWidth = 400, idleHint }: Props) {
   const { projectId } = useParams()
   const meta = STAGES[stage - 1]
@@ -46,8 +58,8 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
   const [estOpen, setEstOpen] = useState(false)
 
   const openEstimate = () => { setEstOpen(true); estimate.mutate(params) }
-  const confirmRun = () => {
-    run.mutate(params, {
+  const confirmRun = (force = false) => {
+    run.mutate(force ? { ...params, force: true } : params, {
       onSuccess: ({ run_id }) => { if (projectId) setActiveRun(projectId, stage, run_id); setEstOpen(false) },
     })
   }
@@ -95,8 +107,8 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
       <EstimateModal
         open={estOpen} onClose={() => setEstOpen(false)} onConfirm={confirmRun} estimate={estimate.data} loading={estimate.isPending} error={estimate.error}
         spend={summary.data?.spend_usd ?? 0} cap={summary.data?.cap_usd ?? 15} stageTitle={`${pad2(stage)} ${meta.title}`} running={run.isPending}
+        runError={describeRunError(run.error)} onForce={() => confirmRun(true)} onSettings={() => navigate('/settings')}
       />
-      {run.error ? <div className="mt-4"><ErrorState title="Run failed to start" error={run.error} /></div> : null}
     </>
   )
 }
