@@ -312,23 +312,24 @@ def export(
 def models(search: str | None = typer.Option(None, "--search", "-s", help="substring filter")) -> None:
     """List the OpenRouter model catalogue with $/1M token prices."""
     try:
-        from .providers.openrouter import OpenRouterClient
+        from .providers.openrouter import MissingApiKey, OpenRouterError, get_client
     except ImportError as exc:
         err_console.print(f"[red]model catalogue unavailable[/]: {exc}")
         raise typer.Exit(code=1) from exc
 
     async def _fetch():
-        client = OpenRouterClient()
-        try:
-            return await client.catalogue()
-        finally:
-            closer = getattr(client, "aclose", None) or getattr(client, "close", None)
-            if closer is not None:
-                result = closer()
-                if asyncio.iscoroutine(result):
-                    await result
+        # get_client() reads the keychain via genie.secrets and raises MissingApiKey — the same
+        # path the runner and /api/models use, so there is exactly one place to configure.
+        return await get_client().catalogue()
 
-    infos = asyncio.run(_fetch())
+    try:
+        infos = asyncio.run(_fetch())
+    except MissingApiKey as exc:
+        err_console.print(f"[red]{exc}[/] (or run `genie secrets set openrouter`)")
+        raise typer.Exit(code=1) from exc
+    except OpenRouterError as exc:
+        err_console.print(f"[red]could not fetch the model catalogue[/]: {exc}")
+        raise typer.Exit(code=1) from exc
     q = (search or "").lower()
     table = Table(title="OpenRouter models")
     for col, just in (("id", "left"), ("name", "left"), ("ctx", "right"), ("$/1M in", "right"), ("$/1M out", "right")):
