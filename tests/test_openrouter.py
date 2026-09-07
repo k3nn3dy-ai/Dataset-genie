@@ -22,14 +22,6 @@ from genie.providers.openrouter import (
     model_family,
 )
 
-
-@pytest.fixture(autouse=True)
-def _isolate_genie_home(tmp_path, monkeypatch):
-    """config.Settings reads GENIE_GENIE_HOME (env_prefix + field name), not GENIE_HOME.
-    Set it here so this module never touches ~/.dataset-genie. Autouse runs before `genie_home`."""
-    monkeypatch.setenv("GENIE_GENIE_HOME", str(tmp_path))
-
-
 BASE = "https://openrouter.ai/api/v1"
 
 CATALOGUE = {

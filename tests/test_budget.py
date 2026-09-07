@@ -10,11 +10,6 @@ from genie.models import Project, RunItem
 from genie.schemas import ProjectConfig
 
 
-@pytest.fixture(autouse=True)
-def _isolate_genie_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("GENIE_GENIE_HOME", str(tmp_path))
-
-
 def make_project(cap: float, stop_at: int = 90, spend: float = 0.0) -> str:
     with session_scope() as s:
         p = Project(slug=f"p-{cap}-{stop_at}", name="P", config=ProjectConfig().model_dump(),

@@ -14,12 +14,6 @@ from genie.models import Project, RawCall, Run, RunItem
 from genie.schemas import ProjectConfig
 
 
-@pytest.fixture(autouse=True)
-def _isolate_genie_home(tmp_path, monkeypatch):
-    """config.Settings reads GENIE_GENIE_HOME (env_prefix + field name), not GENIE_HOME."""
-    monkeypatch.setenv("GENIE_GENIE_HOME", str(tmp_path))
-
-
 @pytest.fixture()
 def project(genie_home) -> str:
     with session_scope() as s:

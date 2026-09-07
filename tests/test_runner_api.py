@@ -14,11 +14,6 @@ from genie.schemas import DoneEvent, LogEvent, ProgressEvent
 
 
 @pytest.fixture(autouse=True)
-def _isolate_genie_home(tmp_path, monkeypatch):
-    monkeypatch.setenv("GENIE_GENIE_HOME", str(tmp_path))
-
-
-@pytest.fixture(autouse=True)
 def fake_secrets():
     store: dict[str, str] = {}
     secrets.set_backend_for_tests(store)
