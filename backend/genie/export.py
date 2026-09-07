@@ -58,7 +58,7 @@ KINDS_FOR_FORMAT: dict[str, tuple[str, ...]] = {
     "tools": ("tools",),
     "grpo": ("grpo",),
 }
-EXPORTABLE_ROW_STATUSES = ("accepted", "edited")
+EXPORTABLE_ROW_STATUSES = ("draft", "accepted", "edited")
 EXCLUDED_ROW_STATUSES = ("filtered", "refusal", "flagged")
 LOW_SCORE_FLAG = "low_score"
 
@@ -145,15 +145,6 @@ def pair_from_record(pair: PairRecord, chosen_row: RowRecord) -> Pair:
 
 
 # ---------------------------------------------------------------- selection
-def _project_has_reviewed_rows(project_id: str, session: Session) -> bool:
-    stmt = (
-        select(RowRecord.id)
-        .where(RowRecord.project_id == project_id, RowRecord.status.in_(EXPORTABLE_ROW_STATUSES))
-        .limit(1)
-    )
-    return session.execute(stmt).first() is not None
-
-
 def select_rows(
     project_id: str,
     session: Session,
@@ -164,20 +155,14 @@ def select_rows(
 ) -> list[Row]:
     """Rows eligible for export, in stable id order.
 
-    Statuses `accepted` and `edited` are exported. If the project has never been reviewed
-    (no row is accepted/edited), `draft` rows are exported instead so an un-reviewed run is still
-    usable. `filtered`, `refusal` and `flagged` rows are never exported.
+    Statuses `draft`, `accepted` and `edited` are exported (review only ever *removes* rows by
+    flagging/filtering them); `filtered`, `refusal` and `flagged` rows are never exported.
     When `gate_on_score` is on, rows scoring below `gate_threshold` are dropped and counted in
     `stats["gated_out"]`; when off (default) they are kept and flagged `low_score`.
     """
-    statuses: tuple[str, ...] = EXPORTABLE_ROW_STATUSES
-    if not _project_has_reviewed_rows(project_id, session):
-        statuses = ("draft",)
-        if stats is not None:
-            stats["draft_fallback"] = 1
     stmt = (
         select(RowRecord)
-        .where(RowRecord.project_id == project_id, RowRecord.status.in_(statuses))
+        .where(RowRecord.project_id == project_id, RowRecord.status.in_(EXPORTABLE_ROW_STATUSES))
         .order_by(RowRecord.id)
     )
     if kinds is not None:
@@ -216,11 +201,11 @@ def select_pairs(
     drop_ties: bool = True,
     stats: dict[str, int] | None = None,
 ) -> list[Pair]:
-    """Judged (or accepted) pairs whose chosen row is exportable; ties dropped when `drop_ties`.
+    """Pairs (`draft`, `judged`, `accepted`; `dropped` never) whose chosen row is exportable.
 
-    Falls back to `draft` pairs when nothing has been judged yet (same rationale as rows).
+    Ties — status `tie` or a judge verdict of `tie` — are excluded when `drop_ties` is on.
     """
-    statuses = ["judged", "accepted"] + ([] if drop_ties else ["tie"])
+    statuses = ["draft", "judged", "accepted"] + ([] if drop_ties else ["tie"])
     stmt = (
         select(PairRecord, RowRecord)
         .join(RowRecord, RowRecord.id == PairRecord.row_id)
@@ -228,25 +213,16 @@ def select_pairs(
         .order_by(RowRecord.id, PairRecord.id)
     )
     recs = session.execute(stmt).all()
-    if not recs:
-        stmt = (
-            select(PairRecord, RowRecord)
-            .join(RowRecord, RowRecord.id == PairRecord.row_id)
-            .where(PairRecord.project_id == project_id, PairRecord.status == "draft")
-            .order_by(RowRecord.id, PairRecord.id)
-        )
-        recs = session.execute(stmt).all()
-        if recs and stats is not None:
-            stats["draft_pairs_fallback"] = 1
 
     pairs: list[Pair] = []
     gated_out = 0
     for pair_rec, row_rec in recs:
         if row_rec.status in EXCLUDED_ROW_STATUSES:
             continue
-        score = None
-        if pair_rec.judge and isinstance(pair_rec.judge, dict):
-            score = pair_rec.judge.get("score")
+        judge = pair_rec.judge if isinstance(pair_rec.judge, dict) else {}
+        if drop_ties and judge.get("verdict") == "tie":
+            continue
+        score = judge.get("score")
         if score is None:
             score = row_rec.score
         if req.gate_on_score and score is not None and score < req.gate_threshold:
@@ -562,10 +538,6 @@ def build_bundle(
         report = validate_rows(items, req.validate_template, kind=kind)  # raises loudly
         warnings.extend(f"{fmt}: {w}" for w in report.warnings)
         items_by_format[fmt] = items
-    if stats.get("draft_fallback"):
-        warnings.append("project has no accepted/edited rows; exported draft rows (never reviewed)")
-    if stats.get("draft_pairs_fallback"):
-        warnings.append("project has no judged pairs; exported draft pairs")
     if stats.get("low_score") and not req.gate_on_score:
         warnings.append(
             f"{stats['low_score']} row(s) scored below {req.gate_threshold}; kept and flagged "

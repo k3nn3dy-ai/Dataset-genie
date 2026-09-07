@@ -78,11 +78,28 @@ async def start_stage(project: Project, stage: int, params: dict | None, session
         runner = _runner()
     except ImportError as e:  # pragma: no cover - only before the runner track lands
         raise StageError(503, f"job runner unavailable: {e}") from e
-    result = runner.start(
-        project_id=project.id, stage=stage, params=merged, items=items, handler=module.handle,
-        model_slug=module.model_slug(project, merged), est_usd=est.est_usd,
-        concurrency=project_config(project).concurrency,
-    )
-    if inspect.isawaitable(result):
-        result = await result
+    try:
+        result = runner.start(
+            project_id=project.id, stage=stage, params=merged, items=items, handler=module.handle,
+            model_slug=module.model_slug(project, merged), est_usd=est.est_usd,
+            concurrency=project_config(project).concurrency,
+        )
+        if inspect.isawaitable(result):
+            result = await result
+    except Exception as e:
+        status = _provider_error_status(e)
+        if status is None:
+            raise
+        raise StageError(status, str(e)) from e
     return {"run_id": result, "estimate": est.to_dict(), "items": len(items)}
+
+
+def _provider_error_status(exc: Exception) -> int | None:
+    """`OpenRouterError` (incl. `MissingApiKey`) -> its `.status` or 400; anything else -> None."""
+    try:
+        from ..providers.openrouter import OpenRouterError  # type: ignore
+    except ImportError:  # pragma: no cover
+        return None
+    if isinstance(exc, OpenRouterError):
+        return int(getattr(exc, "status", None) or 400)
+    return None

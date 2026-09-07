@@ -24,3 +24,7 @@ def client(genie_home):
 
     with TestClient(create_app()) as c:
         yield c
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "integration: full pipeline against FakeOpenRouter (slow-ish)")

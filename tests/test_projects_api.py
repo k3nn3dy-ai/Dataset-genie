@@ -134,3 +134,17 @@ def test_estimate_and_run_dispatch(client, runner):
     r = client.post(f"/api/projects/{p.id}/stages/1/run", json={"params": {}})
     assert r.status_code == 409 and r.json()["detail"]["estimate"]["over_cap"] is True
     assert client.post(f"/api/projects/{p.id}/stages/1/run", json={"params": {"force": True}}).status_code == 200
+
+
+def test_run_maps_missing_api_key_to_400(client, monkeypatch):
+    from genie.providers.openrouter import MissingApiKey
+
+    class Boom:
+        async def start(self, **kw):
+            raise MissingApiKey()
+    monkeypatch.setattr("genie.pipeline.dispatch._runner", lambda: Boom())
+    with db.session_scope() as s:
+        p = make_project(s)
+    r = client.post(f"/api/projects/{p.id}/stages/1/run", json={"params": {}})
+    assert r.status_code == 400, r.text
+    assert "key" in str(r.json()["detail"]).lower()

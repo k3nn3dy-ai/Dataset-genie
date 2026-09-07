@@ -206,17 +206,20 @@ def test_gate_on_excludes_and_counts(genie_home):
     assert res.gated_out == 8 and sum(res.counts["sft"].values()) == 32
 
 
-def test_select_rows_draft_fallback_only_when_never_reviewed(genie_home):
+def test_select_rows_exports_draft_accepted_and_edited_only(genie_home):
     with session_scope() as s:
         pid = seed_project(s, status="draft").id
-        rows = ex.select_rows(pid, s, ex.ExportRequest(formats=["sft"]), stats=(stats := {}))
-        assert len(rows) == 40 and stats.get("draft_fallback") == 1
-        # accept one row → drafts stop being exported
-        rec = s.get(RowRecord, rows[0].metadata.id)
-        rec.status = "accepted"
+        rows = ex.select_rows(pid, s, ex.ExportRequest(formats=["sft"]))
+        assert len(rows) == 40
+        # reviewing one row (edited) or accepting another must not drop the remaining drafts
+        s.get(RowRecord, rows[0].metadata.id).status = "edited"
+        s.get(RowRecord, rows[1].metadata.id).status = "accepted"
+        s.get(RowRecord, rows[2].metadata.id).status = "flagged"
         s.flush()
-        rows = ex.select_rows(pid, s, ex.ExportRequest(formats=["sft"]), stats=(stats := {}))
-        assert [r.metadata.id for r in rows] == [rec.id] and "draft_fallback" not in stats
+        rows = ex.select_rows(pid, s, ex.ExportRequest(formats=["sft"]))
+        assert len(rows) == 39
+        statuses = {s.get(RowRecord, r.metadata.id).status for r in rows}
+        assert statuses == {"draft", "edited", "accepted"}
 
 
 def test_select_rows_kinds_filter(genie_home):
@@ -236,8 +239,12 @@ def test_select_pairs_drops_ties_by_default(project_id):
     with session_scope() as s:
         first = s.scalars(__import__("sqlalchemy").select(PairRecord).limit(1)).one()
         first.status = "tie"
+        second = s.scalars(__import__("sqlalchemy").select(PairRecord).offset(1).limit(1)).one()
+        second.judge = {**second.judge, "verdict": "tie"}  # judged status but tie verdict
+        third = s.scalars(__import__("sqlalchemy").select(PairRecord).offset(2).limit(1)).one()
+        third.status = "draft"  # not yet judged → still exportable
         s.flush()
-        assert len(ex.select_pairs(project_id, s, ex.ExportRequest(formats=["dpo"]))) == 39
+        assert len(ex.select_pairs(project_id, s, ex.ExportRequest(formats=["dpo"]))) == 38
         assert len(ex.select_pairs(project_id, s, ex.ExportRequest(formats=["dpo"]), drop_ties=False)) == 40
 
 
