@@ -67,8 +67,21 @@ def test_non_empty_content_or_tool_calls():
     assert any("empty" in i for i in v.validate_row(row(U(""), A("b"))))
     assert any("empty" in i for i in v.validate_row(row(U("a"), A(""))))
     assert any("empty" in i for i in v.validate_row(row(U("a"), A(None))))
-    ok = row(U("a"), Message(role="assistant", content=None, tool_calls=[call()]))
+    ok = row(
+        U("a"),
+        Message(role="assistant", content=None, tool_calls=[call()]),
+        Message(role="tool", content="{}", tool_call_id="c1"),
+        A("done"),
+    )
     assert v.validate_row(ok) == []
+
+
+def test_final_assistant_must_have_content_and_no_dangling_tool_calls():
+    dangling = row(U("weather?"), Message(role="assistant", content=None, tool_calls=[call("c1")]))
+    issues = v.validate_row(dangling)
+    assert any("final turn" in i and "tool_calls" in i for i in issues), issues
+    with_text = row(U("weather?"), Message(role="assistant", content="calling", tool_calls=[call("c1")]))
+    assert any("final turn" in i for i in v.validate_row(with_text))
 
 
 def test_tool_turns_only_after_tool_calls_and_ids_match():
@@ -206,6 +219,11 @@ def test_gemma_folds_system_into_first_user_with_warning():
     assert did and folded[0].role == "user"
     assert folded[0].content.startswith(SFT_ROWS[0].messages[0].content)
     assert len(folded) == len(SFT_ROWS[0].messages) - 1
+
+
+def test_gemma_fold_system_leaves_rows_without_system_untouched():
+    msgs, did = v.fold_system(SFT_ROWS[1].messages)
+    assert not did and msgs == SFT_ROWS[1].messages
 
 
 def test_gemma_rejects_tool_rows():

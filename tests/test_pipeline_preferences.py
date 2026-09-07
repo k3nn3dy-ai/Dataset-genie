@@ -160,3 +160,13 @@ async def test_provider_routing_for_corruptor_and_weaker(genie_home):
     ctx2.script(lambda model, msgs, kw: "weaker answer")
     assert (await preferences.handle(items[1], ctx2)).status == "done"
     assert ctx2.calls[0]["provider"] == {"order": ["together"], "allow_fallbacks": True}
+
+
+async def test_cancelled_preference_item_is_skipped(world):
+    p, _ = world
+    ctx = FakeCtx(p.id, 4)
+    ctx.cancel()
+    with db.session_scope() as s:
+        items, _ = preferences.plan(p, {}, s)
+    res = await preferences.handle(items[0], ctx)
+    assert res.status == "skipped" and ctx.calls == []

@@ -68,3 +68,42 @@ def test_secrets_bad_name(client):
     assert r.status_code == 400
     r = client.delete("/api/settings/secrets/aws")
     assert r.status_code == 400
+
+
+# ----------------------------------------------------------------------------- review fixes
+@pytest.mark.parametrize("patch", [
+    {"provider_order": "openai"},            # str, not list
+    {"budget_cap_usd": "lots"},              # not a number
+    {"budget_cap_usd": -1},
+    {"stop_at_pct": 150},
+    {"concurrency": 0},
+    {"default_models": {"judge": 5}},
+    {"default_models": "openai/gpt-4o"},
+    {"not_a_setting": True},
+    {"prefer_prompt_caching": "yes please"},
+])
+def test_put_rejects_invalid_values(client, patch):
+    r = client.put("/api/settings/", json=patch)
+    assert r.status_code == 400, r.text
+    # nothing persisted
+    assert client.get("/api/settings/").json()["budget_cap_usd"] == 15.0
+
+
+@pytest.mark.parametrize("patch", [
+    {"provider_order": ["sk-or-v1-0123456789abcdef0123456789abcdef"]},
+    {"default_models": {"judge": "hf_abcdefghijklmnopqrstuvwxyz0123"}},
+])
+def test_put_rejects_secret_like_values(client, patch):
+    r = client.put("/api/settings/", json=patch)
+    assert r.status_code == 400
+    assert "sk-or" not in client.get("/api/settings/").text
+    assert "hf_abc" not in client.get("/api/settings/").text
+
+
+def test_put_valid_values_are_coerced_and_typed(client):
+    r = client.put("/api/settings/", json={"provider_order": ["OpenAI", "Anthropic"], "concurrency": 4,
+                                            "stop_at_pct": 80, "budget_cap_usd": 2})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["provider_order"] == ["OpenAI", "Anthropic"]
+    assert body["concurrency"] == 4 and body["stop_at_pct"] == 80 and body["budget_cap_usd"] == 2.0

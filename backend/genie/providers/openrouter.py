@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field, ValidationError
 from ..config import get_settings
 from ..db import session_scope
 from ..models import CatalogueCache
+from .pricing import fallback_price
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ class CallResult(BaseModel):
     latency_ms: int = 0
     raw: dict = Field(default_factory=dict)
     finish_reason: str | None = None
+    cost_estimated: bool = False  # True when cost came from a price table / char count, not usage.cost
 
 
 class ModelInfo(BaseModel):
@@ -92,11 +94,27 @@ class ModelInfo(BaseModel):
 
 
 class OpenRouterError(Exception):
-    """Non-retryable API failure, or retries exhausted. Carries the HTTP status when known."""
+    """Non-retryable API failure, or retries exhausted. Carries the HTTP status when known, plus
+    `cost_so_far`: what was actually charged by earlier successful sub-calls of the same operation
+    (a structured-output first attempt, earlier embedding batches) so the caller can bill it."""
 
-    def __init__(self, message: str, status: int | None = None) -> None:
+    def __init__(self, message: str, status: int | None = None, *, cost_so_far: float = 0.0,
+                 attempts: list[CallResult] | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.cost_so_far = float(cost_so_far or 0.0)
+        self.attempts: list[CallResult] = list(attempts or [])
+
+
+class _ResponseBodyError(Exception):
+    """OpenRouter answered HTTP 200 but the body carries an `error` object (provider failure)."""
+
+    def __init__(self, error: dict) -> None:
+        self.code = _int_or_none(error.get("code"))
+        self.message = str(error.get("message") or error)
+        meta = error.get("metadata") or {}
+        prov = meta.get("provider_name") if isinstance(meta, dict) else None
+        super().__init__(f"{self.message}{f' (provider {prov})' if prov else ''}")
 
 
 class MissingApiKey(OpenRouterError):
@@ -113,6 +131,10 @@ class StructuredOutputError(Exception):
         self.cost_usd = cost_usd
         self.attempts = attempts or []
         self.last_content = last_content
+
+    @property
+    def cost_so_far(self) -> float:
+        return self.cost_usd
 
 
 def model_family(slug: str) -> str:
@@ -212,6 +234,20 @@ class OpenRouterClient:
                         f"OpenRouter {what} failed after {attempt + 1} attempts: {exc}"
                     ) from exc
                 reason = type(exc).__name__
+            except _ResponseBodyError as exc:
+                code = exc.code
+                retryable = code == 429 or (code is not None and code >= 500)
+                if not retryable:
+                    raise OpenRouterError(
+                        f"OpenRouter {what} failed: {exc}", code
+                    ) from exc
+                if attempt >= self.max_retries:
+                    raise OpenRouterError(
+                        f"OpenRouter {what} failed after {attempt + 1} attempts "
+                        f"(last provider error {code}): {exc}",
+                        code,
+                    ) from exc
+                reason = f"provider error {code}"
             delay = min(RETRY_BASE_SECONDS * (2**attempt), RETRY_MAX_SECONDS)
             delay += random.uniform(0, delay / 2)
             log.warning("openrouter %s: %s; retry %d/%d in %.1fs", what, reason, attempt + 1,
@@ -262,16 +298,29 @@ class OpenRouterClient:
         if response_format:
             kwargs["response_format"] = response_format
 
+        async def op() -> dict:
+            resp = await self._oa.chat.completions.create(**kwargs)
+            raw = resp.model_dump()
+            err = raw.get("error")
+            if isinstance(err, dict) and err:
+                raise _ResponseBodyError(err)  # HTTP 200 with an error body is a failure, not a reply
+            if not raw.get("choices"):
+                raise OpenRouterError(f"OpenRouter chat returned no choices for {model}", None)
+            return raw
+
         t0 = time.perf_counter()
-        resp = await self._with_retries(lambda: self._oa.chat.completions.create(**kwargs), "chat")
+        raw = await self._with_retries(op, "chat")
         latency_ms = int((time.perf_counter() - t0) * 1000)
-        raw = resp.model_dump()
         usage = _normalise_usage(raw.get("usage") or {})
         choice = (raw.get("choices") or [{}])[0]
         message = choice.get("message") or {}
         cost = usage.get("cost")
+        estimated = False
         if cost is None:
-            cost = await self._price(model, usage)
+            cost, estimated = await self._price(
+                model, usage,
+                prompt_chars=_chars(messages), completion_chars=len(message.get("content") or ""),
+            )
         return CallResult(
             content=message.get("content"),
             tool_calls=message.get("tool_calls"),
@@ -282,16 +331,34 @@ class OpenRouterClient:
             latency_ms=latency_ms,
             raw=raw,
             finish_reason=choice.get("finish_reason"),
+            cost_estimated=estimated,
         )
 
-    async def _price(self, model: str, usage: dict) -> float:
+    async def _price(self, model: str, usage: dict, *, prompt_chars: int = 0,
+                     completion_chars: int = 0) -> tuple[float, bool]:
+        """Cost when OpenRouter omitted `usage.cost`: catalogue price × tokens, else the built-in
+        price table × tokens (flagged estimated), else token counts guessed from characters. Never
+        silently zero: with no price source at all this raises."""
         info = await self.model_info(model)
-        if info is None:
-            log.warning("no pricing for %s; recording cost 0", model)
-            return 0.0
-        pt = float(usage.get("prompt_tokens") or 0)
-        ct = float(usage.get("completion_tokens") or 0)
-        return pt * info.prompt_price_per_m / 1e6 + ct * info.completion_price_per_m / 1e6
+        estimated = False
+        if info is not None and (info.prompt_price_per_m or info.completion_price_per_m):
+            pp, cp = info.prompt_price_per_m, info.completion_price_per_m
+        else:
+            fb = fallback_price(model)
+            if fb is None:
+                raise OpenRouterError(
+                    f"no pricing available for {model!r}: OpenRouter returned no usage.cost and "
+                    "the model catalogue has no entry; refusing to record a zero cost"
+                )
+            pp, cp = fb
+            estimated = True
+            log.warning("catalogue has no price for %s; using built-in price table", model)
+        pt, ct = usage.get("prompt_tokens"), usage.get("completion_tokens")
+        if pt is None and ct is None:
+            pt, ct = prompt_chars / 4.0, completion_chars / 4.0  # rough token guess
+            estimated = True
+        cost = float(pt or 0) * pp / 1e6 + float(ct or 0) * cp / 1e6
+        return cost, estimated
 
     # -------------------------------------------------------------------- structured
     async def chat_structured(
@@ -337,7 +404,12 @@ class OpenRouterClient:
         ]
         repair_kw = dict(kw)
         repair_kw["temperature"] = 0.0
-        second = await self.chat(model, repair_msgs, response_format=response_format, **repair_kw)
+        try:
+            second = await self.chat(model, repair_msgs, response_format=response_format, **repair_kw)
+        except OpenRouterError as exc:
+            exc.cost_so_far += first.cost_usd  # the first attempt was charged; the caller must bill it
+            exc.attempts = attempts + exc.attempts
+            raise
         attempts.append(second)
         total = sum(a.cost_usd for a in attempts)
         parsed, err2 = _try_parse(schema, second.content)
@@ -363,23 +435,33 @@ class OpenRouterClient:
         latency_total = 0
         batches = 0
         provider: str | None = None
+        estimated = False
         for start in range(0, len(texts), EMBEDDING_BATCH):
             batch = texts[start : start + EMBEDDING_BATCH]
             t0 = time.perf_counter()
-            resp = await self._with_retries(
-                lambda b=batch: self._oa.embeddings.create(model=model, input=b), "embeddings"
-            )
-            latency_total += int((time.perf_counter() - t0) * 1000)
-            raw = resp.model_dump()
-            data = sorted(raw.get("data") or [], key=lambda d: d.get("index", 0))
-            vectors.extend([list(map(float, d["embedding"])) for d in data])
-            usage = dict(raw.get("usage") or {})
-            for k, v in usage.items():
-                if isinstance(v, (int, float)) and k != "cost":
-                    usage_total[k] = usage_total.get(k, 0) + v
-            cost = usage.get("cost")
-            if cost is None:
-                cost = await self._price(model, usage)
+            try:
+                resp = await self._with_retries(
+                    lambda b=batch: self._oa.embeddings.create(model=model, input=b), "embeddings"
+                )
+                latency_total += int((time.perf_counter() - t0) * 1000)
+                raw = resp.model_dump()
+                err = raw.get("error")
+                if isinstance(err, dict) and err:
+                    raise OpenRouterError(f"OpenRouter embeddings failed: {_ResponseBodyError(err)}",
+                                          _int_or_none(err.get("code")))
+                data = sorted(raw.get("data") or [], key=lambda d: d.get("index", 0))
+                vectors.extend([list(map(float, d["embedding"])) for d in data])
+                usage = dict(raw.get("usage") or {})
+                for k, v in usage.items():
+                    if isinstance(v, (int, float)) and k != "cost":
+                        usage_total[k] = usage_total.get(k, 0) + v
+                cost = usage.get("cost")
+                if cost is None:
+                    cost, est = await self._price(model, usage, prompt_chars=sum(len(t) for t in batch))
+                    estimated = estimated or est
+            except OpenRouterError as exc:
+                exc.cost_so_far += cost_total  # earlier batches were charged; the caller must bill them
+                raise
             cost_total += float(cost or 0.0)
             provider = raw.get("provider") or provider
             batches += 1
@@ -396,6 +478,7 @@ class OpenRouterClient:
             latency_ms=latency_total,
             raw={"batches": batches, "count": len(vectors)},
             finish_reason=None,
+            cost_estimated=estimated,
         )
         return vectors, result
 
@@ -480,6 +563,24 @@ def _error_message(exc: openai.APIStatusError) -> str:
         if body.get("message"):
             return str(body["message"])
     return str(exc)
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None and str(value).strip() != "" else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _chars(messages: list[dict]) -> int:
+    total = 0
+    for m in messages or []:
+        c = m.get("content")
+        if isinstance(c, str):
+            total += len(c)
+        elif isinstance(c, list):
+            total += sum(len(str(p.get("text", ""))) for p in c if isinstance(p, dict))
+    return total
 
 
 def _safe_json(r: httpx2.Response) -> Any:

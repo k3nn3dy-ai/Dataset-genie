@@ -122,3 +122,25 @@ def test_review_stats(client, world):
     assert body["flags"] == {"low_score": 1, "refusal": 1, "edited": 1}
     assert body["edited"] == 1 and body["pairs"] == 1
     assert body["exportable"] == 3  # draft + accepted + edited
+
+
+def test_bulk_restore_matches_filter_restore(client, world):
+    p, leaves = world
+    base = f"/api/projects/{p.id}/rows"
+    with db.session_scope() as s:
+        from genie.models import RowRecord as RR
+        filt = s.get(RR, f"{p.slug}-{leaves[1].slug}-0004")
+        filt.prev_status = "accepted"
+        filt.filter_reason = "exact_dup: identical to x"
+        filt.meta = {**filt.meta, "flags": ["exact_dup"]}
+        ref = s.get(RR, f"{p.slug}-{leaves[1].slug}-0003")
+        ref.prev_status = "draft"
+        ref.filter_reason = "refusal: assistant declined the request"
+        s.commit()
+    r = client.post(f"{base}/bulk", json={"ids": [filt.id, ref.id], "action": "restore"})
+    assert r.json() == {"updated": 2, "action": "restore"}
+    a = client.get(f"{base}/{filt.id}").json()
+    assert a["status"] == "accepted" and a["prev_status"] is None and a["filter_reason"] is None
+    assert "exact_dup" not in a["metadata"]["flags"]
+    b = client.get(f"{base}/{ref.id}").json()
+    assert b["status"] == "draft" and b["filter_reason"] is None

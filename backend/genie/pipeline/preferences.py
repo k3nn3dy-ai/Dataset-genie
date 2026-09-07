@@ -130,6 +130,8 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
 
     rejected = ""
     for attempt in range(2):
+        if ctx.is_cancelled():
+            return ItemResult(status="skipped", error="cancelled", cost_usd=call_cost(*results))
         res = await ctx.call(target_id=row_id, model=model, messages=call_messages, temperature=temperature,
                              max_tokens=pcfg.responses.max_tokens, provider=provider)
         results.append(res)

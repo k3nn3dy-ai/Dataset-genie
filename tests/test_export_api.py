@@ -61,6 +61,29 @@ def test_post_export_422_with_issue_list(client, project_id):
     assert client.get(f"/api/projects/{project_id}/exports").json() == []
 
 
+def test_post_export_422_on_secret_leak_with_no_files(client, project_id, genie_home):
+    from genie.models import Project
+
+    with session_scope() as s:
+        s.get(Project, project_id).domain_brief = "token hf_abcdefghijklmnopqrstuvwxyz"
+    r = client.post(f"/api/projects/{project_id}/export", json={"formats": ["sft"]})
+    assert r.status_code == 422, r.text
+    assert "token" in r.json()["detail"]["message"].lower()
+    assert not (genie_home / "exports" / "demo").exists()
+    assert client.get(f"/api/projects/{project_id}/exports").json() == []
+
+
+def test_post_export_500_on_unexpected_error_leaves_nothing(client, project_id, genie_home, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("template exploded")
+
+    monkeypatch.setattr(ex, "render_dataset_card", boom)
+    r = client.post(f"/api/projects/{project_id}/export", json={"formats": ["sft"]})
+    assert r.status_code == 500
+    assert "template exploded" in r.json()["detail"]
+    assert not (genie_home / "exports" / "demo").exists()
+
+
 def test_post_export_validates_request_body(client, project_id):
     r = client.post(f"/api/projects/{project_id}/export", json={"formats": ["parquet"]})
     assert r.status_code == 422

@@ -33,9 +33,9 @@ from .prompts import leaf_path
 
 STAGE = 3
 MAX_TOOL_HOPS = 4
-REFUSAL_WINDOW = 200  # only the opening of an answer counts — "I won't" mid-answer is not a refusal
-SHORT_ANSWER_CHARS = 30
-NONTRIVIAL_PROMPT_CHARS = 60
+REFUSAL_MAX_WORDS = 40  # a refusal is short; longer answers with a refusal phrase are hedged real answers
+SHORT_REFUSAL_WORDS = 12  # under this, a refusal phrase anywhere counts
+NONTRIVIAL_PROMPT_CHARS = 60  # a one-to-three-word content-free reply to a prompt this long is a refusal
 
 REFUSAL_PATTERNS: list[re.Pattern[str]] = [
     re.compile(p, re.IGNORECASE)
@@ -61,6 +61,13 @@ MOOD_GUIDE: dict[str, str] = {
 }
 
 _answer_re = re.compile(r"^\s*ANSWER:\s*(.+?)\s*$", re.MULTILINE)
+_sentence_end = re.compile(r"(?<=[.!?])\s+|\n+")
+_hedge = re.compile(r"\b(but|however|though|although|that said|instead)\b", re.IGNORECASE)
+_substance = re.compile(r"`|^\s*(?:\d+[.)]|[-*])\s|\$\s?\w|\b\w+\s+/\w|\s--?\w", re.MULTILINE)
+
+
+class Cancelled(Exception):
+    """Raised inside a work item when ctx.is_cancelled() flips; the item is reported `skipped`."""
 
 
 class ResponseError(Exception):
@@ -80,11 +87,38 @@ def kind_for(data_types: list[str] | None) -> str:
     return "sft"
 
 
+def _first_sentence(text: str) -> str:
+    return _sentence_end.split(text.strip(), maxsplit=1)[0] if text.strip() else ""
+
+
+def has_substance(answer: str) -> bool:
+    """Code/command tokens, numbered or bulleted steps, or a long body all mean a real answer."""
+    text = answer or ""
+    return bool(_substance.search(text)) or len(text.split()) > REFUSAL_MAX_WORDS
+
+
 def is_refusal(prompt: str, answer: str) -> bool:
-    head = (answer or "").strip()[:REFUSAL_WINDOW]
-    if any(p.search(head) for p in REFUSAL_PATTERNS):
+    """A refusal opens with a refusal phrase, is not hedged into an answer ("…, but the cause is…"),
+    and carries no substantive content. Very short answers count if they contain the phrase anywhere.
+    A short *correct* answer ("Use `ipconfig /flushdns`.") is not a refusal."""
+    text = (answer or "").strip()
+    if not text:
         return True
-    return len((answer or "").strip()) < SHORT_ANSWER_CHARS and len((prompt or "").strip()) >= NONTRIVIAL_PROMPT_CHARS
+    if (len(text.split()) <= 3 and not has_substance(text)
+            and len((prompt or "").strip()) >= NONTRIVIAL_PROMPT_CHARS):
+        return True  # "No." to a real question is a non-answer
+    first = _first_sentence(text)
+    hit = next((m for m in (p.search(first) for p in REFUSAL_PATTERNS) if m), None)
+    if hit is None and len(text.split()) < SHORT_REFUSAL_WORDS:
+        hit = next((m for m in (p.search(text) for p in REFUSAL_PATTERNS) if m), None)
+        scope = text
+    else:
+        scope = first
+    if hit is None:
+        return False
+    if _hedge.search(scope[hit.end():]):
+        return False  # "I won't go into X here, but…" / "I'm unable to see your logs, but…"
+    return not has_substance(text)
 
 
 def pick_teacher(cfg: ResponsesConfig, index: int, rng: random.Random) -> ModelSlot:
@@ -245,6 +279,8 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
     n_system = len(teacher_messages) - 1  # how many leading messages to swap for the persisted system
 
     async def teacher_turn(messages: list[dict], *, tools: list[dict] | None = None, temperature: float | None = None):
+        if ctx.is_cancelled():
+            raise Cancelled()
         res = await ctx.call(
             target_id=prompt.id, model=teacher.slug, messages=messages,
             temperature=cfg.temperature if temperature is None else temperature,
@@ -268,6 +304,8 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
                 await _multi_turn(ctx, teacher_turn, teacher_messages, cfg, rng, prompt.id, results, models_used)
     except ResponseError as e:
         return ItemResult(status="error", error=str(e), cost_usd=call_cost(*results))
+    except Cancelled:
+        return ItemResult(status="skipped", error="cancelled", cost_usd=call_cost(*results))
 
     # -- assemble the persisted conversation
     body = teacher_messages[n_system:]
@@ -313,7 +351,7 @@ async def _multi_turn(ctx, teacher_turn, messages: list[dict], cfg: ResponsesCon
     turns = rng.randint(min(cfg.turns_min, cfg.turns_max), max(cfg.turns_min, cfg.turns_max))
     for _ in range(max(0, turns - 1)):
         if ctx.is_cancelled():
-            break
+            raise Cancelled()
         sim_prompt = render("responses_simulated_user", mood=cfg.user_mood,
                             mood_guide=MOOD_GUIDE.get(cfg.user_mood, ""), transcript=_transcript(messages))
         res = await ctx.call(target_id=target_id, model=sim.slug, temperature=sim.temperature, max_tokens=min(sim.max_tokens, 400),
@@ -343,6 +381,8 @@ async def _tools_trajectory(ctx, teacher_turn, messages: list[dict], tools: list
         messages.append({"role": "assistant", "content": res.content or None, "tool_calls": calls})
         models_used["tool_simulator"] = sim.slug
         for tc in calls:
+            if ctx.is_cancelled():
+                raise Cancelled()
             name = tc["function"]["name"]
             sim_prompt = render("responses_tool_simulator", name=name,
                                 schema_json=json.dumps(_tool_schema(tools, name), indent=2),

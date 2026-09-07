@@ -117,9 +117,10 @@ def test_apply_and_restore_round_trip(world):
         # idempotent second pass
         again = filters.apply_filters(p.id, FilterConfig(near_dup=False), s)
         assert again["removed_total"] == 0
-        assert filters.restore([ids[1], ids[2], ids[3], ids[4]], s) == 3
-        r2, r3, r4 = (s.get(RowRecord, i) for i in ids[1:4])
-        assert (r2.status, r3.status, r4.status) == ("draft", "accepted", "draft")
+        # restore covers filtered *and* refusal-bucketed rows (DECISIONS #24): r5 was a stage-3 refusal
+        assert filters.restore([ids[1], ids[2], ids[3], ids[4]], s) == 4
+        r2, r3, r4, r5 = (s.get(RowRecord, i) for i in ids[1:5])
+        assert (r2.status, r3.status, r4.status, r5.status) == ("draft", "accepted", "draft", "draft")
         assert r3.filter_reason is None and r3.prev_status is None and "pii" not in r3.meta["flags"]
 
 
@@ -169,3 +170,21 @@ def test_filter_api_run_summary_restore(client, world, monkeypatch):
     with db.session_scope() as s:
         assert s.query(Run).filter_by(stage=6, status="done").count() == 1
     assert client.get("/api/projects/nope/filter/summary").status_code == 404
+
+
+def test_pii_ipv4_edge_cases_from_review():
+    text = "netmask 255.255.255.0 default 0.0.0.0 broadcast 255.255.255.255 link 169.254.1.1 ver 1.2.3.4 cgnat 100.64.0.1"
+    assert filters.public_ips(text) == []
+    assert filters.public_ips("multicast 239.1.2.3 and reserved 240.0.0.1") == []
+    assert filters.public_ips("v1.2.3.4, version 2.3.4.5, release 3.4.5.6 and 4.5.6.7 release") == []
+    assert filters.public_ips("host 8.8.4.4 and 203.0.113.9 timed out") == ["8.8.4.4", "203.0.113.9"]
+
+
+def test_uk_ni_edge_cases_from_review():
+    assert filters.UK_NI_RE.search("AB123456C")
+    assert filters.UK_NI_RE.search("AB 12 34 56 C")
+    assert not filters.UK_NI_RE.search("AO123456A")  # O invalid as 2nd letter
+    assert not filters.UK_NI_RE.search("QB123456A")  # Q invalid as 1st letter
+    assert not filters.UK_NI_RE.search("AB123456E")  # suffix must be A-D
+    rows = [row("ni-spaced", answer="Ref AB 12 34 56 C on the ticket.")]
+    assert [r.row_id for r in filters.rule_pii(rows, CFG)] == ["ni-spaced"]

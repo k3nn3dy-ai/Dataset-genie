@@ -188,3 +188,33 @@ def test_log_paging_omits_bodies_unless_full(client, run_id):
     item = r3.json()["items"][0]
     assert item["request"]["messages"][0]["role"] == "user" and item["response"] == {"big": "y" * 50}
     assert client.get("/api/runs/nope/log").status_code == 404
+
+
+def test_run_json_reports_partial_and_resume_force_flag(client, run_id, monkeypatch, fake_secrets):
+    from genie.jobs.runner import ItemResult
+
+    with session_scope() as s:
+        s.query(RunItem).filter_by(run_id=run_id, target_id="t2").update({"status": "partial"})
+        s.get(Run, run_id).status = "paused"
+    body = client.get(f"/api/runs/{run_id}").json()
+    assert body["partial"] == 1
+
+    seen: list[str] = []
+    mod = types.ModuleType("genie.pipeline.registry")
+
+    async def handler(item, ctx):
+        seen.append(item.target_id)
+        return ItemResult(status="done")
+
+    mod.get_handler = lambda stage: handler  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "genie.pipeline.registry", mod)
+    fake_secrets["openrouter"] = "sk-or-x"
+    monkeypatch.setattr("genie.providers.openrouter.get_client", lambda **kw: object())
+    r = client.post(f"/api/runs/{run_id}/resume", json={"force": True})
+    assert r.status_code == 200, r.text
+    import time
+    for _ in range(100):
+        if client.get(f"/api/runs/{run_id}").json()["status"] == "done":
+            break
+        time.sleep(0.01)
+    assert seen == ["t2"]

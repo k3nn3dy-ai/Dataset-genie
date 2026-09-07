@@ -16,12 +16,13 @@ interface Props {
   cap: number
   stageTitle: string
   running?: boolean
-  runError?: { status: number; message: string; kind: 'nokey' | 'overcap' | 'nothing' | 'other' } | null
+  runError?: { status: number; message: string; kind: 'nokey' | 'overcap' | 'conflict' | 'nothing' | 'other'; stage?: number | null; runId?: string | null } | null
   onForce?: () => void
   onSettings?: () => void
+  onOpenStage?: (stage: number, runId?: string | null) => void
 }
 
-export function EstimateModal({ open, onClose, onConfirm, estimate, loading, error, spend, cap, stageTitle, running, runError, onForce, onSettings }: Props) {
+export function EstimateModal({ open, onClose, onConfirm, estimate, loading, error, spend, cap, stageTitle, running, runError, onForce, onSettings, onOpenStage }: Props) {
   const after = spend + (estimate?.est_usd ?? 0)
   const pctAfter = cap > 0 ? (after / cap) * 100 : 0
   const over = estimate?.over_cap || after > cap
@@ -36,8 +37,9 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
       )}
     >
       {runError && (
-        <Banner tone={runError.kind === 'nothing' ? 'cyan' : runError.kind === 'overcap' ? 'amber' : 'red'} className="mb-4">
+        <Banner tone={runError.kind === 'nothing' ? 'cyan' : runError.kind === 'overcap' || runError.kind === 'conflict' ? 'amber' : 'red'} className="mb-4">
           {runError.kind === 'nokey' ? <>No OpenRouter API key is set. {onSettings && <button type="button" className="underline text-cyan" onClick={onSettings}>Set your key in Settings</button>} and try again.</>
+            : runError.kind === 'conflict' ? <>A run is already in progress for this project{runError.stage ? ` (stage ${String(runError.stage).padStart(2, '0')})` : ''} — {runError.stage && onOpenStage ? <button type="button" className="underline text-cyan" onClick={() => onOpenStage(runError.stage!, runError.runId)} data-testid="open-running-stage">open it</button> : 'wait for it to finish'}.</>
             : runError.kind === 'overcap' ? <>The server refused: this run would exceed the budget cap ({runError.message}). You can force it — the cap is still enforced per call.</>
             : runError.message}
         </Banner>

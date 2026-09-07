@@ -67,8 +67,18 @@ def post_project_id_export(
                 "issues": [i.model_dump() for i in exc.issues],
             },
         ) from exc
-    except ValueError as exc:
+    except ex.SecretLeakError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": f"{exc}: a token-like string reached the dataset card / config; "
+                               "remove it from the project brief or config and retry"},
+        ) from exc
+    except (ValueError, LookupError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"export failed: {exc}") from exc
 
     rec = ex.record_export(session, project_id, result, req)
     hf_url: str | None = None

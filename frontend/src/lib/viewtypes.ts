@@ -1,5 +1,5 @@
 // UI-side types that are not part of the canonical schema mirror in types.ts.
-import type { Difficulty, ExportFormat, ModelSlot, Row, RowStatus, RunStatus } from './types'
+import type { Difficulty, ExportFormat, ModelSlot, Row, RowStatus, Run, RunStatus } from './types'
 
 export interface PromptItem {
   id: string
@@ -57,6 +57,9 @@ export interface ReviewStats { total: number; by_status: Record<string, number>;
 
 /** Stage status incl. `paused` (resumable) which the backend reports in /summary. */
 export type StageState = 'todo' | 'running' | 'paused' | 'done' | 'failed'
+
+/** `GET /runs/{id}` adds `partial` (items that made billed calls but did not finish). */
+export type RunWithPartial = Run & { partial?: number }
 
 export interface HFStatus { has_token: boolean; username: string | null }
 

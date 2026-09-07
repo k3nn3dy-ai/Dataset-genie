@@ -178,3 +178,13 @@ async def test_pinned_judge_provider_is_passed(world):
     for it in items:
         assert (await judge.handle(it, ctx)).status == "done"
     assert ctx.calls and all(c["provider"] == {"order": ["openai"], "allow_fallbacks": True} for c in ctx.calls)
+
+
+async def test_cancelled_judge_items_are_skipped_without_calls(world):
+    p, _, _ = world
+    ctx = FakeCtx(p.id, 5)
+    ctx.cancel()
+    with db.session_scope() as s:
+        items, _ = judge.plan(p, {}, s)
+    res = [await judge.handle(i, ctx) for i in items]
+    assert {r.status for r in res} == {"skipped"} and ctx.calls == []

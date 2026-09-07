@@ -1,8 +1,8 @@
 """Secret storage. Secrets live only in the OS keychain (service "dataset-genie").
 
 Names are restricted to the two the app needs. The backend is injectable so tests never touch
-the real keychain; if no keyring backend is available we fall back to an in-memory store and log
-a warning (the secret then lives only for the lifetime of the process).
+the real keychain; if the keyring backend is missing, locked or fails to initialise we fall back to
+an in-memory store and log a warning (the secret then lives only for the lifetime of the process).
 """
 from __future__ import annotations
 
@@ -18,9 +18,13 @@ SERVICE = "dataset-genie"
 SECRET_NAMES: tuple[str, ...] = ("openrouter", "huggingface")
 
 _keyring = keyring  # module-level indirection so tests can swap it
-_memory: dict[str, str] = {}  # fallback store when no keyring backend exists
+_memory: dict[str, str] = {}  # fallback store when the keyring backend is unusable
 _test_backend: MutableMapping[str, str] | None = None
 _warned = False
+
+# Every keyring failure mode we degrade on: no backend, locked keychain, init failure, or any
+# other KeyringError. PasswordDeleteError is handled separately where it means "nothing stored".
+_KEYRING_FAILURES: tuple[type[Exception], ...] = (keyring.errors.KeyringError,)
 
 
 def set_backend_for_tests(store: MutableMapping[str, str] | None) -> None:
@@ -38,7 +42,8 @@ def _check_name(name: str) -> str:
 def _warn_once(exc: Exception) -> None:
     global _warned
     if not _warned:
-        log.warning("keyring backend unavailable (%s); secrets held in memory only", exc)
+        log.warning("keyring backend unavailable (%s: %s); secrets held in memory only",
+                    type(exc).__name__, exc)
         _warned = True
 
 
@@ -50,7 +55,7 @@ def get_secret(name: str) -> str | None:
         return _memory[name]
     try:
         value = _keyring.get_password(SERVICE, name)
-    except keyring.errors.NoKeyringError as exc:
+    except _KEYRING_FAILURES as exc:
         _warn_once(exc)
         return None
     return value or None
@@ -67,7 +72,7 @@ def set_secret(name: str, value: str) -> None:
     try:
         _keyring.set_password(SERVICE, name, value)
         _memory.pop(name, None)
-    except keyring.errors.NoKeyringError as exc:
+    except _KEYRING_FAILURES as exc:
         _warn_once(exc)
         _memory[name] = value
 
@@ -82,7 +87,7 @@ def delete_secret(name: str) -> None:
         _keyring.delete_password(SERVICE, name)
     except keyring.errors.PasswordDeleteError:
         pass  # nothing stored
-    except keyring.errors.NoKeyringError as exc:
+    except _KEYRING_FAILURES as exc:
         _warn_once(exc)
 
 

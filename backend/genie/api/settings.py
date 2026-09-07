@@ -4,10 +4,11 @@ Secret values are write-only: no endpoint ever returns them.
 """
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 from sqlalchemy.orm import Session
 
 from .. import secrets
@@ -21,6 +22,23 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 SETTINGS_KEY = "app"
 _FORBIDDEN_FRAGMENTS = ("key", "token", "secret", "password")
+# Values that look like credentials must never be stored in (or echoed from) settings.
+_SECRET_VALUE_RE = re.compile(r"sk-or-[A-Za-z0-9_-]{8,}|\bhf_[A-Za-z0-9]{16,}|\bsk-[A-Za-z0-9]{20,}")
+
+
+class SettingsPatch(BaseModel):
+    """Typed, whitelisted shape of `PUT /api/settings/`. Every field optional; unknown keys 400."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    default_models: dict[str, str] | None = None
+    budget_cap_usd: float | None = Field(default=None, gt=0, le=100_000)
+    stop_at_pct: int | None = Field(default=None, ge=1, le=100)
+    concurrency: int | None = Field(default=None, ge=1, le=64)
+    prefer_prompt_caching: StrictBool | None = None
+    allow_fallback_providers: StrictBool | None = None
+    provider_order: list[str] | None = None
+    catalogue_ttl_hours: int | None = Field(default=None, ge=1, le=24 * 30)
 
 
 def default_settings() -> dict[str, Any]:
@@ -91,10 +109,38 @@ async def get_settings_(session: DbSession) -> dict[str, Any]:
     return load_settings(session)
 
 
+def _reject_secret_values(obj: Any, path: str = "") -> None:
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            _reject_secret_values(v, f"{path}{k}.")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            _reject_secret_values(v, f"{path}{i}.")
+    elif isinstance(obj, str) and _SECRET_VALUE_RE.search(obj):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{path.rstrip('.')}' contains a credential-like value; use PUT /api/settings/secrets",
+        )
+
+
+def validate_patch(patch: dict[str, Any]) -> dict[str, Any]:
+    """Whitelist + type-check a settings patch. Returns the coerced patch (only provided keys)."""
+    _reject_secret_like(patch)
+    try:
+        model = SettingsPatch.model_validate(patch)
+    except ValidationError as exc:
+        problems = "; ".join(
+            f"{'.'.join(str(p) for p in e['loc']) or '<root>'}: {e['msg']}" for e in exc.errors()
+        )
+        raise HTTPException(status_code=400, detail=f"invalid settings: {problems}") from exc
+    coerced = model.model_dump(exclude_none=True)
+    _reject_secret_values(coerced)
+    return coerced
+
+
 @router.put("/")
 async def put_settings(patch: dict[str, Any], session: DbSession) -> dict[str, Any]:
-    _reject_secret_like(patch)
-    return save_settings(session, patch)
+    return save_settings(session, validate_patch(patch))
 
 
 class SecretIn(BaseModel):

@@ -6,14 +6,15 @@ import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from ..db import get_session, session_scope
 from ..jobs.events import RunEvents, to_sse
-from ..jobs.runner import runner
+from ..jobs.runner import RunConflict, runner
 from ..models import RawCall, Run
 from ..providers.openrouter import MissingApiKey, OpenRouterError
 from ..schemas import DoneEvent
@@ -33,6 +34,18 @@ def run_to_dict(run: Run) -> dict[str, Any]:
     return {f: getattr(run, f) for f in RUN_FIELDS}
 
 
+def run_body(run_id: str) -> dict[str, Any]:
+    """Run fields plus item counts (`partial`, `pending`, `items_by_status`)."""
+    try:
+        return runner.run_summary(run_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"run {run_id!r} not found") from exc
+
+
+class ResumeBody(BaseModel):
+    force: bool = False  # re-run `partial` items too (their earlier calls are billed again)
+
+
 def _get_run(session: Session, run_id: str) -> Run:
     run = session.get(Run, run_id)
     if run is None:
@@ -41,8 +54,8 @@ def _get_run(session: Session, run_id: str) -> Run:
 
 
 @router.get("/{run_id}")
-async def get_run(run_id: str, session: DbSession) -> dict[str, Any]:
-    return run_to_dict(_get_run(session, run_id))
+async def get_run(run_id: str) -> dict[str, Any]:
+    return run_body(run_id)
 
 
 @router.get("/{run_id}/events")
@@ -80,11 +93,12 @@ async def cancel_run(run_id: str) -> dict[str, Any]:
         await runner.cancel(run_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return run_to_dict(runner.get(run_id))
+    return run_body(run_id)
 
 
 @router.post("/{run_id}/resume")
-async def resume_run(run_id: str) -> dict[str, Any]:
+async def resume_run(run_id: str, body: Annotated[ResumeBody | None, Body()] = None) -> dict[str, Any]:
+    force = bool(body.force) if body is not None else False
     with session_scope() as s:
         run = _get_run(s, run_id)
         stage, status = run.stage, run.status
@@ -101,14 +115,19 @@ async def resume_run(run_id: str) -> dict[str, Any]:
     if handler is None:
         raise HTTPException(status_code=503, detail=f"no handler registered for stage {stage}")
     try:
-        await runner.resume(run_id, handler)
+        await runner.resume(run_id, handler, force=force)
     except MissingApiKey as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except OpenRouterError as exc:
         raise HTTPException(status_code=exc.status or 502, detail=str(exc)) from exc
+    except RunConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "run_conflict", "message": str(exc), "stage": exc.stage, "run_id": exc.run_id},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"run_id": run_id, **run_to_dict(runner.get(run_id))}
+    return {"run_id": run_id, **run_body(run_id)}
 
 
 @router.get("/{run_id}/log")

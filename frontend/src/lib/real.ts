@@ -137,7 +137,7 @@ export const realApi: DataApi = {
   runStage: (id, stage, params) => api.post(`/projects/${id}/stages/${stage}/run`, { params }),
   getRun: (runId) => api.get(`/runs/${runId}`),
   cancelRun: (runId) => api.post(`/runs/${runId}/cancel`),
-  resumeRun: (runId) => api.post(`/runs/${runId}/resume`),
+  resumeRun: (runId, force = false) => api.post(`/runs/${runId}/resume`, { force }),
   getRunLog: async (runId) => { const r = await api.get<Paged<SrvRawCall>>(`/runs/${runId}/log?page_size=200`); return { ...r, items: r.items.map(toCall).reverse() } },
   subscribeRun: (runId, onEvent) => subscribeRun(runId, onEvent),
   exportBundle: async (id, body) => {

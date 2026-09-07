@@ -160,6 +160,8 @@ async def _judge_row(item: WorkItem, ctx, cfg: JudgeConfig, brief: str) -> ItemR
         if row is None:
             return ItemResult(status="error", error="row not found")
         messages = list(row.messages or [])
+    if ctx.is_cancelled():
+        return ItemResult(status="skipped", error="cancelled")
     m = slot(cfg.model)
     system = render("judge_row", brief=brief, rubric=cfg.rubric)
     user = "## Conversation\n" + _conversation(messages) + "\n\nScore the assistant's final reply."
@@ -207,6 +209,8 @@ async def _judge_pair(item: WorkItem, ctx, cfg: JudgeConfig, brief: str) -> Item
         row_judge = (row.meta or {}).get("judge") or {}
     if not messages or messages[-1].get("role") != "assistant" or not rejected:
         return ItemResult(status="error", error="pair is missing chosen or rejected answer")
+    if ctx.is_cancelled():
+        return ItemResult(status="skipped", error="cancelled")
     chosen_text = messages[-1].get("content") or ""
     rejected_text = rejected[-1].get("content") or ""
     rng = seeded_rng(ctx.project_id, item.target_id)

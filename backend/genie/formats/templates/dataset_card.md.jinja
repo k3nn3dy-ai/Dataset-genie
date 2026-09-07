@@ -28,6 +28,10 @@ stratified by **{{ req.stratify_by }}**, seed `{{ req.seed }}`.
 {% if req.validate_template %}
 Every conversation was validated against the **{{ req.validate_template }}** chat template before writing.
 {% endif %}
+{% if gemma_folded %}
+Gemma has no system role: the system turn was folded into the first user turn (joined by a blank
+line) for {{ gemma_folded }} conversation(s) before writing, so the files match what Gemma's template accepts.
+{% endif %}
 
 ## Provenance
 

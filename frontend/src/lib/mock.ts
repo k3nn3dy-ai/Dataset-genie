@@ -4,7 +4,8 @@ import type { ExportRecord, FilterSummary, HFStatus, JudgeSummary, Preset, Promp
 import { MODEL_CATALOGUE, searchModels } from './mock/models'
 import { PRESETS, buildTaxonomy, defaultConfig, flattenLeaves, makeProject, slot } from './mock/project'
 import { generate } from './mock/rows'
-import { cancelMockRun, getMockRun, resumeMockRun, seedPausedRun, startMockRun, subscribeMockRun } from './mock/run'
+import { cancelMockRun, getMockRun, liveMockRun, resumeMockRun, seedPausedRun, startMockRun, subscribeMockRun } from './mock/run'
+import { ApiError } from './api'
 import { modelFamily } from './format'
 import type { DataApi, RowQuery } from './data'
 
@@ -129,10 +130,10 @@ export const mockApi: DataApi = {
   runFilter: (id, cfg) => { const s = need(id); s.project.config.filters = cfg; return mockApi.getFilterSummary(id) },
   restoreRows: (id, ids) => { const s = need(id); s.rows = s.rows.map((r) => (ids.includes(r.metadata.id) ? { ...r, status: 'accepted', filter_reason: null } : r)); return delay(undefined) },
   estimate: (id, stage) => { const s = need(id); const calls = Math.max(12, stage === 1 ? 4 : stage === 2 ? flattenLeaves(s.tree).length || 20 : s.prompts.length || 80); const est: Estimate = { est_usd: Math.round(calls * (stage === 5 ? 0.011 : 0.018) * 100) / 100, calls, est_tokens_in: calls * 1400, est_tokens_out: calls * 620, over_cap: false }; est.over_cap = s.project.spend_usd + est.est_usd > s.project.budget_cap_usd; return delay(est, 500) },
-  runStage: (id, stage) => { const s = need(id); const total = stage === 1 ? 4 : stage === 2 ? Math.max(20, flattenLeaves(s.tree).length) : Math.max(40, s.prompts.length); const r = startMockRun(stage, total); return delay({ run_id: r.id }, 300) },
-  getRun: (runId) => { const r = getMockRun(runId); if (!r) throw new Error('run not found'); const run: Run = { id: r.id, project_id: 'p_linux', stage: r.stage as StageNumber, status: r.status, params: {}, done: r.done0 + r.calls.length, total: r.total, errors: r.calls.filter((c) => c.status === 'error').length, refusals: r.calls.filter((c) => c.status === 'refusal').length, spend_usd: r.calls.reduce((a, c) => a + c.cost_usd, 0), est_usd: 1.2, started_at: r.started / 1000 }; return delay(run) },
+  runStage: (id, stage) => { const s = need(id); const live = liveMockRun(id); if (live) throw new ApiError(409, { code: 'run_conflict', message: `run ${live.id} is already running`, stage: live.stage, run_id: live.id }); const total = stage === 1 ? 4 : stage === 2 ? Math.max(20, flattenLeaves(s.tree).length) : Math.max(40, s.prompts.length); const r = startMockRun(stage, total, id); return delay({ run_id: r.id }, 300) },
+  getRun: (runId) => { const r = getMockRun(runId); if (!r) throw new Error('run not found'); const run: Run = { id: r.id, project_id: r.projectId, stage: r.stage as StageNumber, status: r.status, params: {}, done: r.done0 + r.calls.length, total: r.total, errors: r.calls.filter((c) => c.status === 'error').length, refusals: r.calls.filter((c) => c.status === 'refusal').length, spend_usd: r.calls.reduce((a, c) => a + c.cost_usd, 0), est_usd: 1.2, started_at: r.started / 1000, partial: r.partial } as Run; return delay(run) },
   cancelRun: (runId) => { cancelMockRun(runId); for (const s of state.values()) if (s.paused?.runId === runId) s.paused = null; return delay(undefined) },
-  resumeRun: (runId) => { resumeMockRun(runId); for (const s of state.values()) if (s.paused?.runId === runId) s.paused = null; return delay(undefined, 300) },
+  resumeRun: (runId, force) => { resumeMockRun(runId, force); for (const s of state.values()) if (s.paused?.runId === runId) s.paused = null; return delay(undefined, 300) },
   getRunLog: (runId) => { const r = getMockRun(runId); const calls: RawCall[] = r ? [...r.calls].reverse() : []; return delay(paged(calls, 1, 200)) },
   subscribeRun: (runId, onEvent) => subscribeMockRun(runId, onEvent),
   exportBundle: (id, body) => {

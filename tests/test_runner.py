@@ -333,3 +333,106 @@ async def test_launch_failure_marks_run_failed_not_queued(project, monkeypatch):
         assert len(runs) == 1 and runs[0].status == "failed"
         assert "guard init exploded" in runs[0].error_message and runs[0].finished_at is not None
         assert s.query(Run).filter_by(status="queued").count() == 0
+
+
+# ----------------------------------------------------------------------------- review fixes
+async def two_call_handler(item: WorkItem, ctx: RunContext) -> ItemResult:
+    await ctx.call(target_id=item.target_id, model="teacher", messages=[], est_usd=0.3)
+    await ctx.call(target_id=item.target_id, model="sim-user", messages=[], est_usd=0.3)
+    return ItemResult(status="done")
+
+
+def _cap_project(cap: float) -> str:
+    with session_scope() as s:
+        p = Project(slug=f"cap-{cap}", name="P", config={}, budget_cap_usd=cap, stop_at_pct=100)
+        s.add(p)
+        s.flush()
+        return p.id
+
+
+async def test_budget_stop_mid_item_marks_partial_and_resume_skips_it(genie_home):
+    from _provider_fakes import CostClient
+
+    pid = _cap_project(0.3)
+    client = CostClient(cost=0.3, delay=0)
+    runner = Runner()
+    run_id = await runner.start(project_id=pid, stage=3, params={}, items=items(1), handler=two_call_handler,
+                                model_slug=None, est_usd=0.0, client=client)
+    await runner.wait(run_id)
+    assert runner.get(run_id).status == "budget_stop" and client.calls == 1
+    with session_scope() as s:
+        ri = s.query(RunItem).filter_by(run_id=run_id).one()
+        assert ri.status == "partial"
+        s.get(Project, pid).budget_cap_usd = 5.0
+    body = runner.run_summary(run_id)
+    assert body["partial"] == 1
+    # plain resume: partial items are NOT re-run (they already made billed calls)
+    await runner.resume(run_id, two_call_handler, client=client)
+    await runner.wait(run_id)
+    assert client.calls == 1 and runner.get(run_id).status == "done"
+    logs = [e for _, e in RunEvents.for_run(run_id).replay(None) if e.type == "log"]
+    assert any("partial" in e.msg for e in logs)
+    # forced resume re-runs them (knowingly re-billing)
+    await runner.resume(run_id, two_call_handler, client=client, force=True)
+    await runner.wait(run_id)
+    assert client.calls == 3
+    with session_scope() as s:
+        assert s.query(RunItem).filter_by(run_id=run_id).one().status == "done"
+        assert s.get(Project, pid).spend_usd == pytest.approx(0.9)
+
+
+async def test_mark_interrupted_flags_pending_items_with_calls_as_partial(genie_home):
+    from genie.models import RawCall
+
+    pid = _cap_project(5.0)
+    with session_scope() as s:
+        run = Run(project_id=pid, stage=3, status="running", total=2)
+        s.add(run)
+        s.flush()
+        s.add(RunItem(run_id=run.id, target_id="a", status="pending"))
+        s.add(RunItem(run_id=run.id, target_id="b", status="pending"))
+        s.add(RawCall(project_id=pid, run_id=run.id, stage=3, target_id="a", model_slug="m", cost_usd=0.1))
+        rid = run.id
+    Runner.mark_interrupted()
+    with session_scope() as s:
+        statuses = {r.target_id: r.status for r in s.query(RunItem).filter_by(run_id=rid)}
+        assert statuses == {"a": "partial", "b": "pending"}
+        assert s.get(Run, rid).status == "paused"
+
+
+async def test_failed_call_with_partial_cost_is_billed(project):
+    from genie.providers.openrouter import OpenRouterError
+
+    client = FakeClient(cost=0.01)
+    err = OpenRouterError("repair call failed with HTTP 400", status=400)
+    err.cost_so_far = 0.05
+
+    class Boom(FakeClient):
+        async def chat_structured(self, *a, **k):
+            raise err
+
+        async def embeddings(self, texts, model):
+            raise err
+
+    boom = Boom()
+
+    async def handler(item: WorkItem, ctx: RunContext) -> ItemResult:
+        if item.payload["i"] == 0:
+            await ctx.call_structured(target_id=item.target_id, model="fake/model", messages=[], schema=Shape)
+        else:
+            await ctx.embed(target_id=item.target_id, texts=["x"], model="fake/emb")
+        return ItemResult(status="done")
+
+    runner = Runner()
+    run_id = await runner.start(project_id=project, stage=2, params={}, items=items(2), handler=handler,
+                                model_slug=None, est_usd=0.0, client=boom, concurrency=1)
+    await runner.wait(run_id)
+    run = runner.get(run_id)
+    assert run.status == "done" and run.errors == 2
+    assert run.spend_usd == pytest.approx(0.10)
+    assert runner.context(run_id).guard.reserved == pytest.approx(0.0)
+    with session_scope() as s:
+        calls = s.query(RawCall).filter_by(run_id=run_id).all()
+        assert len(calls) == 2 and all(c.cost_usd == pytest.approx(0.05) and c.error for c in calls)
+        assert s.get(Project, project).spend_usd == pytest.approx(0.10)
+    del client

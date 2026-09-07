@@ -49,21 +49,8 @@ class Estimate:
 
 
 # USD per 1M tokens (prompt, completion). Used only when the catalogue cache is empty.
-FALLBACK_PRICES: dict[str, tuple[float, float]] = {
-    "anthropic/claude-sonnet-4": (3.0, 15.0),
-    "anthropic/claude-3.5-sonnet": (3.0, 15.0),
-    "anthropic/claude-3.5-haiku": (0.8, 4.0),
-    "openai/gpt-4o": (2.5, 10.0),
-    "openai/gpt-4o-mini": (0.15, 0.6),
-    "openai/gpt-4.1": (2.0, 8.0),
-    "openai/gpt-4.1-mini": (0.4, 1.6),
-    "meta-llama/llama-3.1-8b-instruct": (0.05, 0.08),
-    "meta-llama/llama-3.1-70b-instruct": (0.4, 0.4),
-    "google/gemini-2.0-flash-001": (0.1, 0.4),
-    "openai/text-embedding-3-small": (0.02, 0.0),
-    "openai/text-embedding-3-large": (0.13, 0.0),
-}
-DEFAULT_PRICE: tuple[float, float] = (1.0, 3.0)
+# Single source of truth for last-resort prices lives with the provider.
+from ..providers.pricing import DEFAULT_PRICE, FALLBACK_PRICES
 
 
 def price_for(slug: str, session: Session | None = None) -> tuple[float, float]:

@@ -270,6 +270,85 @@ def test_validation_failure_aborts_before_writing(genie_home):
         assert not (genie_home / "exports" / "demo").exists()
 
 
+# ------------------------------------------------------------------ atomicity
+def _exports_tree(genie_home) -> list[str]:
+    root = genie_home / "exports"
+    return sorted(str(p.relative_to(root)) for p in root.rglob("*")) if root.exists() else []
+
+
+def test_secret_in_brief_aborts_with_no_files_left(genie_home):
+    with session_scope() as s:
+        project = seed_project(s, rows_per_leaf=2)
+        project.domain_brief = "notes: my token is hf_abcdefghijklmnopqrstuvwxyz"
+        s.flush()
+        with pytest.raises(ex.SecretLeakError):
+            ex.build_bundle(project.id, ex.ExportRequest(formats=["sft", "dpo"]), s)
+    assert _exports_tree(genie_home) == []
+
+
+def test_render_failure_leaves_no_partial_bundle(genie_home, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("template exploded")
+
+    monkeypatch.setattr(ex, "render_dataset_card", boom)
+    with session_scope() as s:
+        pid = seed_project(s, rows_per_leaf=2).id
+        with pytest.raises(RuntimeError):
+            ex.build_bundle(pid, ex.ExportRequest(formats=["sft"]), s)
+    assert _exports_tree(genie_home) == []
+
+
+def test_successful_bundle_has_no_temp_dir(project_id, genie_home):
+    with session_scope() as s:
+        res = ex.build_bundle(project_id, ex.ExportRequest(formats=["sft"]), s)
+    names = [p.name for p in (genie_home / "exports" / "demo").iterdir()]
+    assert names == [Path(res.path).name] and not names[0].startswith(".")
+
+
+# ------------------------------------------------------------------ gemma folding
+def test_gemma_export_folds_system_turn_into_first_user(project_id, genie_home):
+    req = ex.ExportRequest(formats=["sft", "alpaca", "dpo"], validate_template="gemma", eval_split=0.0)
+    with session_scope() as s:
+        res = ex.build_bundle(project_id, req, s)
+    root = Path(res.path)
+    sft = _lines(root / "sft" / "train.jsonl")
+    assert all(r["messages"][0]["role"] == "user" for r in sft)
+    assert sft[0]["messages"][0]["content"].startswith("You are a precise, helpful expert assistant.\n\n")
+    assert all(m["role"] != "system" for r in sft for m in r["messages"])
+    dpo = _lines(root / "dpo" / "train.jsonl")
+    assert all(m["role"] != "system" for r in dpo for m in r["prompt"])
+    alp = _lines(root / "alpaca" / "train.jsonl")
+    assert not any(r["instruction"].startswith("System: ") for r in alp)
+    assert all(r["instruction"].startswith("You are a precise") for r in alp)
+    assert any("gemma" in w.lower() and "system" in w.lower() for w in res.warnings)
+    card = (root / "dataset_card.md").read_text(encoding="utf-8")
+    assert "Gemma" in card and "folded" in card
+
+
+def test_non_gemma_export_keeps_system_turn(project_id):
+    with session_scope() as s:
+        res = ex.build_bundle(project_id, ex.ExportRequest(formats=["sft"], eval_split=0.0), s)
+    sft = _lines(Path(res.path) / "sft" / "train.jsonl")
+    assert all(r["messages"][0]["role"] == "system" for r in sft)
+
+
+# ------------------------------------------------------------------ split top-up
+def test_split_tops_up_eval_from_largest_strata():
+    rows = _rows({"a": 1, "b": 1, "c": 1, "d": 5})
+    train, evals = ex.stratified_split(rows, 0.5, ex.stratum_key("leaf"), 1)
+    assert len(evals) == 4  # round(8 * 0.5)
+    assert Counter(r.metadata.leaf_id for r in evals) == {"d": 4}  # d keeps one train row
+    assert Counter(r.metadata.leaf_id for r in train) == {"a": 1, "b": 1, "c": 1, "d": 1}
+
+
+def test_split_all_singleton_strata_still_yields_eval_rows():
+    rows = _rows({f"leaf{i:02d}": 1 for i in range(20)})
+    train, evals = ex.stratified_split(rows, 0.1, ex.stratum_key("leaf"), 42)
+    assert len(evals) == 2 and len(train) == 18
+    again = ex.stratified_split(list(reversed(rows)), 0.1, ex.stratum_key("leaf"), 42)[1]
+    assert [r.metadata.id for r in evals] == [r.metadata.id for r in again]
+
+
 def test_unknown_project_and_format(genie_home):
     with session_scope() as s, pytest.raises(LookupError):
         ex.build_bundle("nope", ex.ExportRequest(formats=["sft"]), s)

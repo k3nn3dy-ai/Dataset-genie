@@ -3,23 +3,26 @@ import type { RawCall } from '../viewtypes'
 import { mulberry32, pick } from '../rng'
 
 // Simulated run: emits a believable SSE-like event stream over ~12 seconds.
-export interface MockRunState { id: string; stage: number; total: number; status: RunStatus; started: number; cancelled: boolean; calls: RawCall[]; done0: number }
+export interface MockRunState { id: string; stage: number; total: number; status: RunStatus; started: number; cancelled: boolean; calls: RawCall[]; done0: number; partial: number; projectId: string }
 const runs = new Map<string, MockRunState>()
 let counter = 100
 
-export function startMockRun(stage: number, total: number): MockRunState {
+/** A run still marked running for this project (mirrors the backend's single-run-per-project rule). */
+export function liveMockRun(projectId: string): MockRunState | undefined { return [...runs.values()].find((r) => r.projectId === projectId && r.status === 'running') }
+
+export function startMockRun(stage: number, total: number, projectId = 'p_linux'): MockRunState {
   const id = `run_${(++counter).toString(36)}`
-  const st: MockRunState = { id, stage, total, status: 'running', started: Date.now(), cancelled: false, calls: [], done0: 0 }
+  const st: MockRunState = { id, stage, total, status: 'running', started: Date.now(), cancelled: false, calls: [], done0: 0, partial: 0, projectId }
   runs.set(id, st)
   return st
 }
 /** A run that was interrupted part-way (status paused) — resumable from `done0`. */
 export function seedPausedRun(id: string, stage: number, total: number, done: number): MockRunState {
-  const st: MockRunState = { id, stage, total, status: 'paused', started: Date.now() - 600_000, cancelled: false, calls: [], done0: done }
+  const st: MockRunState = { id, stage, total, status: 'paused', started: Date.now() - 600_000, cancelled: false, calls: [], done0: done, partial: 1, projectId: 'p_k8s' }
   runs.set(id, st)
   return st
 }
-export function resumeMockRun(id: string): void { const r = runs.get(id); if (r) { r.status = 'running'; r.cancelled = false; r.started = Date.now() } }
+export function resumeMockRun(id: string, force = false): void { const r = runs.get(id); if (r) { r.status = 'running'; r.cancelled = false; r.started = Date.now(); if (force) { r.done0 = Math.max(0, r.done0 - r.partial); r.partial = 0 } } }
 export function getMockRun(id: string): MockRunState | undefined { return runs.get(id) }
 export function cancelMockRun(id: string): void { const r = runs.get(id); if (r) r.cancelled = true }
 

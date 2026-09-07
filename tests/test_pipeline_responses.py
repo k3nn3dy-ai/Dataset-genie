@@ -260,3 +260,38 @@ async def test_pinned_provider_routing_reaches_every_call(world):
     ctx2.script(lambda model, msgs, kw: "Check the pod events with kubectl describe and read the last restart reason.")
     await responses.handle(items[1], ctx2)
     assert ctx2.calls[0]["provider"] is None
+
+
+def test_refusal_detector_negative_cases_from_review():
+    p = "Can you explain in detail how DNS resolution works end to end, including caching and TTLs?"
+    assert not responses.is_refusal(p, "I won't go into the full history here, but the short answer is that a resolver walks the hierarchy: root → TLD → authoritative...")
+    assert not responses.is_refusal(p, "I'm unable to see your logs, but the most common cause of this error is a stale cache. Try flushing it with...")
+    assert not responses.is_refusal(p, "Use `ipconfig /flushdns`.")
+    assert not responses.is_refusal(p, "Run ipconfig /flushdns then retry.")
+    assert not responses.is_refusal(p, "1. Flush the cache.\n2. Restart the resolver.")
+    # true refusals still detected
+    assert responses.is_refusal(p, "I can't help with that request.")
+    assert responses.is_refusal(p, "I'm sorry, but I can't help with that.")
+    assert responses.is_refusal(p, "As an AI I cannot assist with wiping audit logs.")
+    assert responses.is_refusal(p, "")
+
+
+async def test_cancel_mid_tools_trajectory_skips_without_row(genie_home):
+    with db.session_scope() as s:
+        p = make_project(s, name="TC", data_types=["tools"], config={"tools_schemas": TOOLS})
+        leaves = seed_tree(s, p, leaves=1)
+        s.add(Prompt(project_id=p.id, leaf_id=leaves[0].id, text="Is prod-web-03 under memory pressure right now? Check please."))
+        s.commit()
+    ctx = FakeCtx(p.id, 3)
+
+    def responder(model, msgs, kw):
+        ctx.cancel()  # cancel arrives while the first hop is in flight
+        return FakeCallResult(content=None, tool_calls=[{"id": "c1", "type": "function",
+                              "function": {"name": "get_host_stats", "arguments": "{}"}}])
+    ctx.script(responder)
+    with db.session_scope() as s:
+        items, _ = responses.plan(p, {}, s)
+    res = await responses.handle(items[0], ctx)
+    assert res.status == "skipped" and len(ctx.calls) == 1  # no simulator call, no second hop
+    with db.session_scope() as s:
+        assert s.query(RowRecord).count() == 0

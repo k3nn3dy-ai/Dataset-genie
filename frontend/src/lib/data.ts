@@ -36,7 +36,7 @@ export interface DataApi {
   runStage(id: string, stage: number, params: Record<string, unknown>): Promise<{ run_id: string }>
   getRun(runId: string): Promise<Run>
   cancelRun(runId: string): Promise<void>
-  resumeRun(runId: string): Promise<void>
+  resumeRun(runId: string, force?: boolean): Promise<void>
   getRunLog(runId: string): Promise<Paged<RawCall>>
   subscribeRun(runId: string, onEvent: (ev: RunEvent) => void): () => void
   exportBundle(id: string, body: ExportRequest): Promise<ExportRecord>

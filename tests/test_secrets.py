@@ -88,3 +88,30 @@ def test_keyring_service_name_and_calls(monkeypatch):
         ("get", "dataset-genie", "openrouter"),
         ("del", "dataset-genie", "openrouter"),
     ]
+
+
+@pytest.mark.parametrize("exc_cls", [keyring.errors.KeyringLocked, keyring.errors.InitError,
+                                     keyring.errors.KeyringError])
+def test_other_keyring_errors_fall_back_to_memory(monkeypatch, caplog, exc_cls):
+    secrets.set_backend_for_tests(None)
+
+    class Broken:
+        def get_password(self, service, name):
+            raise exc_cls("locked")
+
+        def set_password(self, service, name, value):
+            raise exc_cls("locked")
+
+        def delete_password(self, service, name):
+            raise exc_cls("locked")
+
+    monkeypatch.setattr(secrets, "_keyring", Broken())
+    secrets._memory.clear()
+    secrets._warned = False
+    with caplog.at_level(logging.WARNING):
+        assert secrets.secret_status() == {"openrouter": False, "huggingface": False}
+        secrets.set_secret("openrouter", "k")
+    assert "keyring" in caplog.text.lower()
+    assert secrets.get_secret("openrouter") == "k"
+    secrets.delete_secret("openrouter")
+    assert secrets.get_secret("openrouter") is None

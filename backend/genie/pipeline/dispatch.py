@@ -90,12 +90,21 @@ async def start_stage(project: Project, stage: int, params: dict | None, session
         status = _provider_error_status(e)
         if status is None:
             raise
+        if type(e).__name__ == "RunConflict":
+            raise StageError(status, str(e), {
+                "code": "run_conflict",
+                "stage": getattr(e, "stage", None),
+                "run_id": getattr(e, "run_id", None),
+            }) from e
         raise StageError(status, str(e)) from e
     return {"run_id": result, "estimate": est.to_dict(), "items": len(items)}
 
 
 def _provider_error_status(exc: Exception) -> int | None:
-    """`OpenRouterError` (incl. `MissingApiKey`) -> its `.status` or 400; anything else -> None."""
+    """`RunConflict` (a run already active for the project) -> 409; `OpenRouterError` (incl.
+    `MissingApiKey`) -> its `.status` or 400; anything else -> None (re-raised)."""
+    if type(exc).__name__ == "RunConflict":
+        return int(getattr(exc, "status", None) or 409)
     try:
         from ..providers.openrouter import OpenRouterError  # type: ignore
     except ImportError:  # pragma: no cover

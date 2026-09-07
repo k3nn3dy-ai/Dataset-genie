@@ -147,6 +147,8 @@ TOOLS_ROWS: list[Row] = [
             Message(role="system", content="Use tools when needed."),
             Message(role="user", content="Weather in Paris?"),
             Message(role="assistant", content=None, tool_calls=[_call("call_1", "Paris")]),
+            Message(role="tool", content='{"temp_c":18}', tool_call_id="call_1"),
+            Message(role="assistant", content="It is 18 °C in Paris."),
         ],
         tools=[WEATHER_TOOL],
         metadata=_meta(

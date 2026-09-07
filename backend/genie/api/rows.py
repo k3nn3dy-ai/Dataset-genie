@@ -11,6 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from ..db import get_session
 from ..models import Project, RowRecord, TopicNode
+from ..pipeline import filters
 from ..pipeline._common import rstrip_assistant, validate_messages
 
 DB = Annotated[Session, Depends(get_session)]
@@ -150,6 +151,9 @@ def patch_row(project_id: str, row_id: str, body: RowPatch, session: DB):
 def bulk(project_id: str, body: BulkBody, session: DB):
     _project(session, project_id)
     rows = session.scalars(select(RowRecord).where(RowRecord.project_id == project_id, RowRecord.id.in_(body.ids))).all()
+    if body.action == "restore":
+        # same semantics as POST /filter/restore: filtered *and* refusal-bucketed rows, prev_status/filter_reason cleared
+        return {"updated": filters.restore([r.id for r in rows], session), "action": body.action}
     for r in rows:
         if body.action == "accept":
             r.status = "accepted"
@@ -162,10 +166,6 @@ def bulk(project_id: str, body: BulkBody, session: DB):
             set_flags(r, remove=["flagged"])
             if r.status == "flagged":
                 r.status = r.prev_status or "draft"
-        elif body.action == "restore":
-            if r.status in ("filtered", "flagged"):
-                r.status = r.prev_status or "draft"
-                r.filter_reason = None
         elif body.action == "delete":
             session.delete(r)
     session.commit()

@@ -102,7 +102,7 @@ export function useRunStage(id: string | undefined, stage: number) {
   return useMutation({ mutationFn: (params: Record<string, unknown>) => data.runStage(id!, stage, params) })
 }
 export function useCancelRun() { return useMutation({ mutationFn: (runId: string) => data.cancelRun(runId) }) }
-export function useResumeRun() { return useMutation({ mutationFn: (runId: string) => data.resumeRun(runId) }) }
+export function useResumeRun() { return useMutation({ mutationFn: (v: { runId: string; force?: boolean }) => data.resumeRun(v.runId, v.force) }) }
 export function useExport(id: string | undefined) {
   const inv = useInvalidateProject()
   return useMutation({ mutationFn: (body: ExportRequest) => data.exportBundle(id!, body), onSuccess: () => inv(id!) })

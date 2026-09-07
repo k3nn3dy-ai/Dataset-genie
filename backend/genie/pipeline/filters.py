@@ -45,8 +45,16 @@ Rule = Callable[[list[RowRecord], FilterConfig, "dict[str, list[float]] | None"]
 _ws = re.compile(r"\s+")
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 IPV4_RE = re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b")
-UK_NI_RE = re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]\b")
-PRIVATE_NETS = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8")]
+# UK NI: 1st letter not D F I Q U V; 2nd letter additionally not O; optional spaces (AB 12 34 56 C).
+UK_NI_RE = re.compile(r"\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z] ?\d{2} ?\d{2} ?\d{2} ?[A-D]\b")
+# Not PII: private ranges plus "this host"/CGNAT/link-local/multicast+reserved/broadcast.
+NON_PII_NETS = [ipaddress.ip_network(n) for n in (
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8",
+    "0.0.0.0/8", "100.64.0.0/10", "169.254.0.0/16", "224.0.0.0/3",
+)]
+PRIVATE_NETS = NON_PII_NETS  # backwards-compatible name
+_VERSION_PREFIX = re.compile(r"(?:\bv(?:ersion)?\.?|\brelease|\bver\.?|\bbuild)\s*$", re.IGNORECASE)
+_VERSION_SUFFIX = re.compile(r"^\s*(?:release|build|beta|rc\d*|stable|lts)\b", re.IGNORECASE)
 STOPWORDS = {
     "the", "a", "an", "and", "or", "to", "of", "in", "is", "it", "you", "that", "for", "on", "with",
     "this", "be", "are", "can", "if",
@@ -62,14 +70,24 @@ def conversation_text(row: RowRecord) -> str:
 
 
 def public_ips(text: str) -> list[str]:
+    """Dotted quads that plausibly identify a real host: excludes private/special ranges, netmask-like
+    quads (an octet of 255) and version strings ("v1.2.3.4", "release 1.2.3.4", "1.2.3.4 release")."""
     out = []
-    for m in IPV4_RE.findall(text):
+    for m in IPV4_RE.finditer(text):
+        quad = m.group(0)
         try:
-            ip = ipaddress.ip_address(m)
+            ip = ipaddress.ip_address(quad)
         except ValueError:
             continue
-        if not any(ip in net for net in PRIVATE_NETS):
-            out.append(m)
+        if any(ip in net for net in NON_PII_NETS):
+            continue
+        if "255" in quad.split("."):
+            continue
+        before = text[max(0, m.start() - 12):m.start()]
+        after = text[m.end():m.end() + 12]
+        if _VERSION_PREFIX.search(before) or _VERSION_SUFFIX.search(after):
+            continue
+        out.append(quad)
     return out
 
 
@@ -240,9 +258,9 @@ def restore(ids: list[str], session: Session) -> int:
     rows = session.scalars(select(RowRecord).where(RowRecord.id.in_(ids))).all()
     n = 0
     for r in rows:
-        if r.status not in ("filtered", "refusal") or not r.filter_reason:
+        if r.status not in ("filtered", "refusal"):
             continue
-        rule = r.filter_reason.split(":", 1)[0]
+        rule = (r.filter_reason or "").split(":", 1)[0]
         r.status = r.prev_status or "draft"
         r.prev_status = None
         r.filter_reason = None

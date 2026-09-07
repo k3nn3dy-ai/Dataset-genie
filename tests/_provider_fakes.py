@@ -44,3 +44,19 @@ class FakeClient:
         vecs = [[float(len(t)), 1.0, 0.0] for t in texts]
         return vecs, CallResult(usage={"prompt_tokens": len(texts)}, cost_usd=self.cost, model=model,
                                 latency_ms=1, raw={})
+
+
+class CostClient:
+    """Every chat costs `cost`; optional delay so concurrency matters; optional failure schedule."""
+
+    def __init__(self, cost: float = 0.3, delay: float = 0.01) -> None:
+        self.cost, self.delay, self.calls = cost, delay, 0
+        self.fail_with: Exception | None = None  # raised on every call when set
+
+    async def chat(self, model: str, messages: list[dict], **kw: Any) -> CallResult:
+        self.calls += 1
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.fail_with is not None:
+            raise self.fail_with
+        return CallResult(content="ok", usage={"cost": self.cost}, cost_usd=self.cost, model=model)

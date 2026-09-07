@@ -3,8 +3,8 @@
 Two layers:
   1. Structural (spec §3): optional single leading system turn; strict user/assistant
      alternation, with `tool` turns allowed only immediately after an assistant turn carrying
-     `tool_calls` (ids must match) and followed by an assistant turn; final turn is assistant;
-     assistant content has no trailing whitespace; every turn has content or tool_calls;
+     `tool_calls` (ids must match) and followed by an assistant turn; final turn is an assistant
+     reply with content and no unanswered tool_calls; assistant content has no trailing whitespace; every turn has content or tool_calls;
      ids unique within the export.
   2. Chat-template: render every conversation with an in-repo Jinja mirror of the target
      template (`formats/templates/*.jinja`) that reproduces the template's structural
@@ -130,8 +130,13 @@ def validate_row(row: Row) -> list[str]:
         else:
             expect = "assistant"
 
-    if msgs[-1].role != "assistant":
-        issues.append(f"final turn must be assistant, got {msgs[-1].role}")
+    last = msgs[-1]
+    if last.role != "assistant":
+        issues.append(f"final turn must be assistant, got {last.role}")
+    elif last.tool_calls:
+        issues.append(
+            "final turn must be an assistant reply with content, not unanswered tool_calls"
+        )
     return issues
 
 
@@ -149,6 +154,8 @@ def validate_pair(pair: Pair) -> list[str]:
         m = side[0]
         if m.role != "assistant":
             issues.append(f"{side_name} must be an assistant message, got {m.role}")
+        if m.tool_calls:
+            issues.append(f"{side_name} must be a plain assistant reply, not tool_calls")
         if not _has_content(m):
             issues.append(f"{side_name}: empty content")
         if m.content is not None and m.content != m.content.rstrip():

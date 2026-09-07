@@ -426,3 +426,93 @@ async def test_get_client_reads_prefer_prompt_caching_from_settings(genie_home):
         save_settings(s, {"prefer_prompt_caching": False})
     assert get_client(api_key="k").prefer_prompt_caching is False
     reset_client_cache()
+
+
+# ----------------------------------------------------------------------------- review fixes
+async def test_repair_call_http_error_carries_first_call_cost(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("not json", cost=0.05))
+    srv.enqueue("POST", "/api/v1/chat/completions", 400, {"error": {"message": "bad request"}})
+    c = srv.client()
+    with pytest.raises(OpenRouterError) as ei:
+        await c.chat_structured("openai/gpt-4o", MSGS, Answer)
+    assert ei.value.cost_so_far == pytest.approx(0.05)
+    assert len(ei.value.attempts) == 1 and ei.value.attempts[0].cost_usd == pytest.approx(0.05)
+
+
+async def test_structured_error_exposes_cost_so_far(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("nope", cost=0.002))
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("nope", cost=0.003))
+    c = srv.client()
+    with pytest.raises(StructuredOutputError) as ei:
+        await c.chat_structured("openai/gpt-4o", MSGS, Answer)
+    assert ei.value.cost_so_far == pytest.approx(0.005) == ei.value.cost_usd
+
+
+async def test_embeddings_partial_batch_failure_carries_cost(srv):
+    ok = {"object": "list", "model": "openai/text-embedding-3-small",
+          "data": [{"index": i, "embedding": [0.1, 0.2]} for i in range(64)],
+          "usage": {"prompt_tokens": 100, "total_tokens": 100, "cost": 0.02}}
+    srv.enqueue("POST", "/api/v1/embeddings", 200, ok)
+    srv.enqueue("POST", "/api/v1/embeddings", 400, {"error": {"message": "bad"}})
+    c = srv.client()
+    with pytest.raises(OpenRouterError) as ei:
+        await c.embeddings([f"t{i}" for i in range(100)], "openai/text-embedding-3-small")
+    assert ei.value.cost_so_far == pytest.approx(0.02)
+    assert "400" in str(ei.value)
+
+
+async def test_cost_falls_back_to_price_table_when_catalogue_down(srv):
+    srv.set("GET", "/api/v1/models", 500, {"error": {"message": "down"}})
+    srv.enqueue("POST", "/api/v1/chat/completions", 200,
+                completion("hi", cost=None, prompt=1_000_000, completion_=100_000))
+    c = srv.client(max_retries=0)
+    res = await c.chat("openai/gpt-4o", MSGS)
+    # table: gpt-4o = (2.5, 10.0) per M -> 2.5 + 1.0
+    assert res.cost_usd == pytest.approx(3.5)
+    assert res.cost_estimated is True
+
+
+async def test_cost_estimated_from_chars_when_usage_missing(srv):
+    body = completion("hello world", cost=None)
+    del body["usage"]
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, body)
+    c = srv.client()
+    res = await c.chat("openai/gpt-4o", MSGS)
+    assert res.cost_estimated is True and res.cost_usd > 0
+
+
+async def test_unknown_model_without_any_price_raises(srv):
+    srv.set("GET", "/api/v1/models", 500, {"error": {"message": "down"}})
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("hi", cost=None, model="mystery/model-x"))
+    c = srv.client(max_retries=0)
+    with pytest.raises(OpenRouterError) as ei:
+        await c.chat("mystery/model-x", MSGS)
+    assert "pric" in str(ei.value).lower()
+
+
+async def test_http200_error_body_is_an_error_and_retried_on_5xx_code(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200,
+                {"error": {"code": 502, "message": "Provider returned error", "metadata": {"provider_name": "X"}}})
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("recovered"))
+    c = srv.client()
+    res = await c.chat("openai/gpt-4o", MSGS)
+    assert res.content == "recovered" and len(c._test_sleeps) == 1
+
+
+async def test_http200_error_body_fails_fast_on_4xx_code(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200,
+                {"error": {"code": 400, "message": "Invalid model"}, "user_id": "u"})
+    c = srv.client()
+    with pytest.raises(OpenRouterError) as ei:
+        await c.chat("openai/gpt-4o", MSGS)
+    assert "Invalid model" in str(ei.value) and ei.value.status == 400
+    assert c._test_sleeps == []
+
+
+async def test_http200_empty_choices_is_an_error(srv):
+    body = completion("x")
+    body["choices"] = []
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, body)
+    c = srv.client()
+    with pytest.raises(OpenRouterError):
+        await c.chat("openai/gpt-4o", MSGS)

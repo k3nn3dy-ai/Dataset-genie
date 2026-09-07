@@ -16,6 +16,7 @@ import hashlib
 import json
 import random
 import re
+import shutil
 import time
 from collections import Counter, defaultdict
 from collections.abc import Callable
@@ -32,7 +33,7 @@ from sqlalchemy.orm import Session
 from . import __version__
 from .config import get_settings
 from .formats.base import FORMATTERS, dumps_line
-from .formats.validate import ExportValidationError, ValidationIssue, validate_rows
+from .formats.validate import ExportValidationError, ValidationIssue, fold_system, validate_rows
 from .models import Export, PairRecord, Project, RowRecord
 from .schemas import (
     ExportConfig,
@@ -255,9 +256,11 @@ def stratified_split(
     """Deterministic stratified split.
 
     Each stratum is shuffled with its own seeded RNG (seed + stratum name) so adding a leaf does
-    not reshuffle the others. Per-stratum eval counts use largest-remainder rounding towards the
-    global target `round(len(items) * eval_frac)`; strata with a single item always go to train and
-    no stratum ever loses all of its train items. Output order is stable (sorted by id).
+    not reshuffle the others. Per-stratum eval counts start at `floor(len * eval_frac)` and are
+    topped up towards the global target `round(len(items) * eval_frac)` from the strata with the
+    most remaining train rows (ties by name), never taking a multi-row stratum's last train row.
+    Only when every remaining stratum is a singleton (no stratification signal left) are whole
+    singletons moved to eval, chosen by a seeded shuffle of their names. Output order is stable.
     """
     if not items or eval_frac <= 0:
         return list(items), []
@@ -269,24 +272,27 @@ def stratified_split(
         random.Random(f"{seed}:{name}").shuffle(members)
 
     target = round(len(items) * eval_frac)
-    quotas: dict[str, int] = {}
-    remainders: list[tuple[float, str]] = []
-    for name, members in groups.items():
-        if len(members) < 2:
-            quotas[name] = 0
-            continue
-        exact = len(members) * eval_frac
-        quotas[name] = min(int(exact), len(members) - 1)
-        remainders.append((exact - int(exact), name))
-    # hand out the remaining eval slots to the strata with the largest fractional parts
-    remainders.sort(key=lambda t: (-t[0], t[1]))
+    quotas: dict[str, int] = {
+        name: min(int(len(members) * eval_frac), len(members) - 1) if len(members) >= 2 else 0
+        for name, members in groups.items()
+    }
+
+    def remaining_train(name: str) -> int:
+        return len(groups[name]) - quotas[name]
+
     short = target - sum(quotas.values())
-    for _, name in remainders:
-        if short <= 0:
+    while short > 0:
+        donors = [n for n in groups if remaining_train(n) > 1]
+        if not donors:
             break
-        if quotas[name] + 1 <= len(groups[name]) - 1:
-            quotas[name] += 1
-            short -= 1
+        pick = min(donors, key=lambda n: (-remaining_train(n), n))
+        quotas[pick] += 1
+        short -= 1
+    if short > 0:  # only singletons left: move whole singletons, deterministically
+        singles = sorted(n for n, m in groups.items() if len(m) == 1 and quotas[n] == 0)
+        random.Random(f"{seed}:singletons").shuffle(singles)
+        for name in singles[:short]:
+            quotas[name] = 1
 
     train: list = []
     evals: list = []
@@ -329,6 +335,7 @@ def render_dataset_card(
     removed: dict[str, int] | None = None,
     refusals: int = 0,
     gated_out: int = 0,
+    gemma_folded: int = 0,
     created_at: str | None = None,
 ) -> str:
     """Hugging Face dataset card (YAML front-matter + provenance body). Never contains secrets."""
@@ -392,6 +399,7 @@ def render_dataset_card(
         removed=removed or {},
         refusals=refusals,
         gated_out=gated_out,
+        gemma_folded=gemma_folded,
         license=license_id,
         created_at=created_at or _now_iso(),
         version=__version__,
@@ -457,14 +465,38 @@ def _sha256(path: Path) -> str:
 
 
 def _bundle_root(slug: str, now: datetime | None) -> Path:
+    """Final bundle directory (not yet created); collisions within a second get a -2, -3 suffix."""
     stamp = (now or datetime.now().astimezone()).strftime("%Y%m%d-%H%M%S")
     base = get_settings().exports_dir / slug
     root = base / stamp
     n = 2
-    while root.exists():
+    while root.exists() or (base / f".tmp-{root.name}").exists():
         root = base / f"{stamp}-{n}"
         n += 1
     return root
+
+
+def _rmdir_if_empty(path: Path) -> None:
+    try:
+        if path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
+    except OSError:
+        pass
+
+
+def _fold_for_gemma(items: list) -> tuple[list, int]:
+    """Gemma has no system role: fold system turns into the first user turn before projection."""
+    out: list = []
+    folded = 0
+    for it in items:
+        if isinstance(it, Row):
+            msgs, did = fold_system(it.messages)
+            out.append(it.model_copy(update={"messages": msgs}) if did else it)
+        else:
+            msgs, did = fold_system(it.prompt)
+            out.append(it.model_copy(update={"prompt": msgs}) if did else it)
+        folded += int(did)
+    return out, folded
 
 
 def _write_jsonl(path: Path, items: list, formatter, include_metadata: bool) -> int:
@@ -544,9 +576,57 @@ def build_bundle(
             f"'{LOW_SCORE_FLAG}' (gate_on_score is off)"
         )
 
-    # 2. write
-    root = _bundle_root(project.slug, now)
+    # 1b. Gemma has no system role: fold before projection so the JSONL matches what was validated
+    gemma_folded = 0
+    if req.validate_template == "gemma":
+        for fmt, items in items_by_format.items():
+            items_by_format[fmt], n = _fold_for_gemma(items)
+            gemma_folded += n
+        if gemma_folded:
+            warnings.append(
+                f"gemma: system turns were folded into the first user turn in the exported JSONL "
+                f"({gemma_folded} conversation(s))"
+            )
+
+    # 2. write everything into a temp dir, then rename atomically; nothing is left behind on error
+    final = _bundle_root(project.slug, now)
+    root = final.parent / f".tmp-{final.name}"
+    shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True, exist_ok=False)
+    try:
+        created_at = _write_bundle(
+            root, project, cfg, req, items_by_format, stats, warnings, gemma_folded, session
+        )
+        root.rename(final)
+    except BaseException:
+        shutil.rmtree(root, ignore_errors=True)
+        _rmdir_if_empty(root.parent)  # a failed first export must not leave exports/<slug>/ behind
+        raise
+
+    counts = json.loads((final / "manifest.json").read_text(encoding="utf-8"))["counts"]
+    files = sorted(str(p.relative_to(final)) for p in final.rglob("*") if p.is_file())
+    return BundleResult(
+        path=str(final),
+        counts=counts,
+        files=files,
+        warnings=warnings,
+        gated_out=stats.get("gated_out", 0),
+        created_at=created_at,
+    )
+
+
+def _write_bundle(
+    root: Path,
+    project: Project,
+    cfg: ProjectConfig,
+    req: ExportRequest,
+    items_by_format: dict[str, list],
+    stats: dict[str, int],
+    warnings: list[str],
+    gemma_folded: int,
+    session: Session,
+) -> str:
+    """Write JSONL, card, YAML and manifest into `root`. Raises on any problem (caller cleans up)."""
     created_at = _now_iso()
     counts: dict[str, dict[str, int]] = {}
     files: list[Path] = []
@@ -563,7 +643,7 @@ def build_bundle(
         files.append(root / fmt / "eval.jsonl")
         counts[fmt] = {"train": n_train, "eval": n_eval}
 
-    removed, refusals = _removed_counts(project_id, session)
+    removed, refusals = _removed_counts(project.id, session)
     card = render_dataset_card(
         project,
         req,
@@ -573,6 +653,7 @@ def build_bundle(
         removed=removed,
         refusals=refusals,
         gated_out=stats.get("gated_out", 0),
+        gemma_folded=gemma_folded,
         created_at=created_at,
     )
     (root / "dataset_card.md").write_text(card, encoding="utf-8")
@@ -595,16 +676,7 @@ def build_bundle(
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     assert_no_secrets(manifest_text, what="manifest.json")
     (root / "manifest.json").write_text(manifest_text, encoding="utf-8")
-    files.append(root / "manifest.json")
-
-    return BundleResult(
-        path=str(root),
-        counts=counts,
-        files=[str(p.relative_to(root)) for p in files],
-        warnings=warnings,
-        gated_out=stats.get("gated_out", 0),
-        created_at=created_at,
-    )
+    return created_at
 
 
 def record_export(session: Session, project_id: str, result: BundleResult, req: ExportRequest) -> Export:

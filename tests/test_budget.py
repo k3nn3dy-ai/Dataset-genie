@@ -1,12 +1,22 @@
 """BudgetGuard: the only place spend is enforced (server-side)."""
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
-from _provider_fakes import FakeClient
+from _provider_fakes import CostClient, FakeClient
 from genie.db import session_scope
-from genie.jobs.runner import BudgetExceeded, BudgetGuard, ItemResult, RunContext, Runner, WorkItem
-from genie.models import Project, RunItem
+from genie.jobs.runner import (
+    BudgetExceeded,
+    BudgetGuard,
+    ItemResult,
+    RunConflict,
+    RunContext,
+    Runner,
+    WorkItem,
+)
+from genie.models import Project, Run, RunItem
 from genie.schemas import ProjectConfig
 
 
@@ -125,3 +135,105 @@ async def test_budget_stop_run_can_be_resumed_after_cap_raised(genie_home):
     run = runner.get(run_id)
     assert run.status == "done" and run.done == 5
     assert run.spend_usd == pytest.approx(0.05)
+
+
+# ----------------------------------------------------------------------------- review fixes
+async def test_guard_sees_spend_recorded_by_another_guard(genie_home):
+    """Two guards on one project (e.g. two runs): spend is read from the DB, not a snapshot."""
+    pid = make_project(cap=1.0, stop_at=90)
+    g1 = BudgetGuard(pid, 1.0, 90)
+    g2 = BudgetGuard(pid, 1.0, 90)
+    await g1.reserve(0.0)
+    await g1.record(0.95, 0.0)
+    assert g2.spend == pytest.approx(0.95)
+    with pytest.raises(BudgetExceeded):
+        await g2.reserve(0.002)
+
+
+async def test_release_exact_amount_not_fifo(genie_home):
+    pid = make_project(cap=10.0, stop_at=100)
+    g = BudgetGuard(pid, 10.0, 100)
+    await g.reserve(0.010)  # big embed call, still in flight
+    await g.reserve(0.002)  # small chat call
+    await g.release(0.002)  # the small call failed
+    assert g.reserved == pytest.approx(0.010)
+    await g.record(0.011, 0.010)
+    assert g.reserved == pytest.approx(0.0)
+
+
+async def test_runner_shares_one_guard_per_project(genie_home):
+    pid = make_project(cap=1.0, stop_at=100)
+    runner = Runner()
+    run_a = await runner.start(project_id=pid, stage=3, params={}, items=items(1),
+                               handler=handler_with_est(0.1), model_slug=None, est_usd=0.1,
+                               client=CostClient(cost=0.1, delay=0))
+    await runner.wait(run_a)
+    run_b = await runner.start(project_id=pid, stage=5, params={}, items=items(1),
+                               handler=handler_with_est(0.1), model_slug=None, est_usd=0.1,
+                               client=CostClient(cost=0.1, delay=0))
+    await runner.wait(run_b)
+    assert runner.context(run_a).guard is runner.context(run_b).guard
+    assert runner.context(run_b).guard.spend == pytest.approx(0.2)
+
+
+async def test_second_concurrent_run_on_project_is_rejected(genie_home):
+    pid = make_project(cap=10.0, stop_at=100)
+    runner = Runner()
+    gate = asyncio.Event()
+
+    async def slow(item: WorkItem, ctx: RunContext) -> ItemResult:
+        await gate.wait()
+        return ItemResult(status="done")
+
+    run_a = await runner.start(project_id=pid, stage=3, params={}, items=items(2), handler=slow,
+                               model_slug=None, est_usd=0.0, client=CostClient())
+    with pytest.raises(RunConflict) as ei:
+        await runner.start(project_id=pid, stage=5, params={}, items=items(2), handler=slow,
+                           model_slug=None, est_usd=0.0, client=CostClient())
+    assert ei.value.status == 409 and run_a in str(ei.value)
+    with session_scope() as s:
+        assert s.query(Run).filter_by(project_id=pid).count() == 1  # no second row written
+    # resume of another run on the same project is refused too
+    with session_scope() as s:
+        other = Run(project_id=pid, stage=1, status="paused", total=1)
+        s.add(other)
+        s.flush()
+        other_id = other.id
+    with pytest.raises(RunConflict):
+        await runner.resume(other_id, slow, client=CostClient())
+    gate.set()
+    await runner.wait(run_a)
+    assert runner.get(run_a).status == "done"
+    # once nothing is running, a new run is fine
+    run_c = await runner.start(project_id=pid, stage=5, params={}, items=items(1), handler=slow,
+                               model_slug=None, est_usd=0.0, client=CostClient())
+    await runner.wait(run_c)
+
+
+async def test_underestimate_with_8_workers_does_not_overshoot(genie_home):
+    """cap=1.0, actual 0.30/call, caller est 0.002, 8 workers -> spend <= cap + one call, budget_stop."""
+    pid = make_project(cap=1.0, stop_at=100)
+    client = CostClient(cost=0.3, delay=0.02)
+    runner = Runner()
+    run_id = await runner.start(project_id=pid, stage=3, params={}, items=items(8),
+                                handler=handler_with_est(0.002), model_slug=None, est_usd=0.0,
+                                client=client, concurrency=8)
+    await runner.wait(run_id)
+    run = runner.get(run_id)
+    with session_scope() as s:
+        spend = s.get(Project, pid).spend_usd
+    assert spend <= 1.0 + 0.3 + 1e-9, spend
+    assert run.status == "budget_stop"
+    assert client.calls == round(spend / 0.3)
+
+
+async def test_stop_after_record_even_if_reservation_was_low(genie_home):
+    """Reaching the stop threshold after a record() ends the run without another dispatch."""
+    pid = make_project(cap=0.3, stop_at=100)
+    client = CostClient(cost=0.3, delay=0)
+    runner = Runner()
+    run_id = await runner.start(project_id=pid, stage=3, params={}, items=items(3),
+                                handler=handler_with_est(0.001), model_slug=None, est_usd=0.0,
+                                client=client, concurrency=1)
+    await runner.wait(run_id)
+    assert runner.get(run_id).status == "budget_stop" and client.calls == 1
