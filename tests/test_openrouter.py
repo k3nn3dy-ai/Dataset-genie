@@ -516,3 +516,14 @@ async def test_http200_empty_choices_is_an_error(srv):
     c = srv.client()
     with pytest.raises(OpenRouterError):
         await c.chat("openai/gpt-4o", MSGS)
+
+
+async def test_free_model_zero_catalogue_price_records_zero_not_error(srv):
+    """Re-verification N1: a catalogue price of $0/$0 is authoritative (free model), not 'no price'."""
+    free = {"id": "acme/tiny:free", "name": "Tiny (free)", "context_length": 8192,
+            "pricing": {"prompt": "0", "completion": "0"}, "supported_parameters": []}
+    srv.set("GET", "/api/v1/models", 200, {"data": CATALOGUE["data"] + [free]})
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("hi", cost=None, model="acme/tiny:free"))
+    c = srv.client()
+    res = await c.chat("acme/tiny:free", MSGS)
+    assert res.content == "hi" and res.cost_usd == 0.0 and res.cost_estimated is False

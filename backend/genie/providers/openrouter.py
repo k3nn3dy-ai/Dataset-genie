@@ -341,7 +341,7 @@ class OpenRouterClient:
         silently zero: with no price source at all this raises."""
         info = await self.model_info(model)
         estimated = False
-        if info is not None and (info.prompt_price_per_m or info.completion_price_per_m):
+        if info is not None:  # a catalogue $0 (free model) is an authoritative price, not a missing one
             pp, cp = info.prompt_price_per_m, info.completion_price_per_m
         else:
             fb = fallback_price(model)
@@ -483,8 +483,18 @@ class OpenRouterClient:
         return vectors, result
 
     # -------------------------------------------------------------------- catalogue
+    def _catalogue_ttl_seconds(self) -> float:
+        hours = get_settings().catalogue_ttl_hours
+        try:
+            stored = _load_settings().get("catalogue_ttl_hours")
+            if isinstance(stored, (int, float)) and stored > 0:
+                hours = stored
+        except Exception:  # noqa: BLE001 - settings table unavailable: keep the env default
+            pass
+        return float(hours) * 3600
+
     async def catalogue(self, force: bool = False) -> list[ModelInfo]:
-        ttl = get_settings().catalogue_ttl_hours * 3600
+        ttl = self._catalogue_ttl_seconds()
         if not force and self._catalogue is not None:
             return self._catalogue
         cached: list[dict] | None = None
