@@ -9,6 +9,8 @@ install:
 	uv pip install -e ".[dev]"
 	@chflags nohidden $(HOME)/.venvs/dataset-genie/lib/python3.11/site-packages/*.pth 2>/dev/null || true
 	@echo "$(CURDIR)/backend" > $(HOME)/.venvs/dataset-genie/lib/python3.11/site-packages/genie_dev.pth
+	@mkdir -p $(HOME)/.cache/dataset-genie
+	@test -e frontend/node_modules || ln -s $(HOME)/.cache/dataset-genie/node_modules frontend/node_modules
 	cd frontend && npm install
 
 dev: ## backend (reload) + vite with /api proxy
