@@ -1,6 +1,7 @@
-"""Regression probes ported from the independent code review (2026-09-07). Each test asserts the
-FIXED behaviour of a confirmed finding; see DECISIONS.md rows 27–34 for the rationale."""
 """Throwaway verification tests for the Dataset Genie code review. NOT part of the repo."""
+# Ported from the independent code review (2026-09-07): each test asserts the FIXED behaviour
+# of a confirmed finding; see DECISIONS.md rows 27–34. Kept close to the original probes.
+# ruff: noqa: F841, RUF059
 from __future__ import annotations
 
 import asyncio

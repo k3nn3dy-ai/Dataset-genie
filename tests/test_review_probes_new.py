@@ -1,6 +1,7 @@
-"""Regression probes ported from the independent code review (2026-09-07). Each test asserts the
-FIXED behaviour of a confirmed finding; see DECISIONS.md rows 27–34 for the rationale."""
 """New probes for behaviour introduced by the fix commit (1a1e3a7..f0fc894). NOT part of the repo."""
+# Ported from the independent code review (2026-09-07): each test asserts the FIXED behaviour
+# of a confirmed finding; see DECISIONS.md rows 27–34. Kept close to the original probes.
+# ruff: noqa: F811, RUF059
 from __future__ import annotations
 
 import asyncio
