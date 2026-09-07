@@ -11,6 +11,7 @@ import asyncio
 import json
 
 import pytest
+
 from fake_openrouter import FakeOpenRouter
 
 runner_mod = pytest.importorskip("genie.jobs.runner")

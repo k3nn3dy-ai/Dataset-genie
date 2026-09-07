@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
-from typing import AsyncIterator, ClassVar
+from collections.abc import AsyncIterator
+from typing import ClassVar
 
 from ..schemas import DoneEvent, RunEvent
 
@@ -18,7 +19,7 @@ RING_SIZE = 500
 
 
 class RunEvents:
-    _registry: ClassVar[dict[str, "RunEvents"]] = {}
+    _registry: ClassVar[dict[str, RunEvents]] = {}
 
     def __init__(self, run_id: str) -> None:
         self.run_id = run_id
@@ -28,7 +29,7 @@ class RunEvents:
         self.closed = False
 
     @classmethod
-    def for_run(cls, run_id: str) -> "RunEvents":
+    def for_run(cls, run_id: str) -> RunEvents:
         if run_id not in cls._registry:
             cls._registry[run_id] = cls(run_id)
         return cls._registry[run_id]

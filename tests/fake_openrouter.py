@@ -503,7 +503,7 @@ class FakeOpenRouter:
             return stage, self._scripts[model]
         if stage and stage in DEFAULT_RESPONDERS:
             return stage, DEFAULT_RESPONDERS[stage]
-        return stage, _generic
+        return stage or "responses", _generic  # unlabelled = teacher call (see _generic)
 
     def _usage(self, messages: list[dict], content: str | None) -> dict:
         p = max(1, len(_all_text(messages)) // 4)

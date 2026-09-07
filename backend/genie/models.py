@@ -34,7 +34,7 @@ class Project(Base):
     created_at: Mapped[float] = mapped_column(Float, default=now)
     updated_at: Mapped[float] = mapped_column(Float, default=now, onupdate=now)
 
-    runs: Mapped[list["Run"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    runs: Mapped[list[Run]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
 
 class Run(Base):
