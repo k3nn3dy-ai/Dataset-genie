@@ -254,6 +254,7 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
         retry_specs: list[PromptSpec] = []
         for b, vec, dup in zip(batch, vecs, flags):
             b["vec"] = vec
+            b["status"] = "rejected_dup" if dup else "active"  # explicit: identical entries compare equal
             if dup:
                 rejected.append(b)
                 retry_specs.append(b["spec"])
@@ -272,8 +273,7 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
             s.add(Prompt(
                 project_id=project.id, leaf_id=leaf.id, run_id=ctx.run_id, text=b["text"],
                 persona=b["spec"].persona, style=b["spec"].style, adversarial=b["spec"].adversarial,
-                noise=b["noise"], embedding=pack(b["vec"]),
-                status="active" if b in accepted else "rejected_dup",
+                noise=b["noise"], embedding=pack(b["vec"]), status=b["status"],
             ))
         s.commit()
     if not accepted:
