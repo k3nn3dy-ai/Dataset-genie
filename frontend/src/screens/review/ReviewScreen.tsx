@@ -74,12 +74,12 @@ export function ReviewScreen() {
       <MonoTable rows={items} rowKey={(r) => r.metadata.id} selectable selected={sel} onSelectedChange={setSel} onRowClick={(r) => setOpenId(r.metadata.id)} activeKey={openId} maxHeight="calc(100vh - 340px)"
         rowTone={(r) => (r.status === 'refusal' || r.status === 'flagged' ? 'amber' : r.status === 'filtered' ? 'dim' : 'default')}
         columns={[
-          { key: 'id', header: 'id', render: (r: RowItem) => <IdCell id={r.metadata.id} max={210} />, sortValue: (r) => r.metadata.id },
-          { key: 'leaf', header: 'leaf', render: (r) => <span className="text-muted">{truncate(r.metadata.leaf_path.at(-1) ?? '', 22)}</span>, sortValue: (r) => r.metadata.leaf_path.at(-1) ?? '' },
-          { key: 'prompt', header: 'prompt excerpt', render: (r) => <TextCell max={220} className="text-text/80" text={(r.messages.find((m) => m.role === 'user')?.content ?? '').replace(/\n+/g, ' ')} /> },
+          { key: 'id', header: 'id', render: (r: RowItem) => <IdCell id={r.metadata.id} max={150} />, sortValue: (r) => r.metadata.id },
+          { key: 'leaf', header: 'leaf', render: (r) => <span className="text-muted">{truncate(r.metadata.leaf_path.at(-1) ?? '', 18)}</span>, sortValue: (r) => r.metadata.leaf_path.at(-1) ?? '' },
+          { key: 'prompt', header: 'prompt excerpt', render: (r) => <TextCell max={140} className="text-text/80" text={(r.messages.find((m) => m.role === 'user')?.content ?? '').replace(/\n+/g, ' ')} /> },
           { key: 'score', header: 'score', align: 'right', width: '60px', render: (r) => <span className={(r.metadata.judge?.score ?? 5) < 3 ? 'text-amber' : 'text-acid'}>{r.metadata.judge?.score.toFixed(1) ?? '—'}</span>, sortValue: (r) => r.metadata.judge?.score ?? -1 },
           { key: 'status', header: 'status', width: '90px', render: (r) => <Chip tone={toneFor(r.status)}>{r.status}</Chip>, sortValue: (r) => r.status },
-          { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1 flex-wrap">{r.metadata.flags.map((f) => <Chip key={f} tone={toneFor(f)}>{f}</Chip>)}</div> },
+          { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1">{r.metadata.flags.slice(0, 2).map((f) => <Chip key={f} tone={toneFor(f)}>{f}</Chip>)}{r.metadata.flags.length > 2 && <Chip tone="dim" title={r.metadata.flags.slice(2).join(', ')}>+{r.metadata.flags.length - 2}</Chip>}</div> },
         ]} />
       <RowDrawer projectId={projectId} rowId={openId} onClose={() => setOpenId(null)} onNav={(dir) => { const i = items.findIndex((r) => r.metadata.id === openId); const n = items[i + dir]; if (n) setOpenId(n.metadata.id) }} />
     </div>

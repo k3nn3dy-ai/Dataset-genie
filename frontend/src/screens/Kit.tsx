@@ -17,7 +17,7 @@ export function Kit() {
   const [slot, setSlot] = useState<ModelSlot>({ slug: 'anthropic/claude-sonnet-4', provider_order: [], allow_fallbacks: true, temperature: 0.7, max_tokens: 2048, weight: 1 })
   return (
     <div className="flex flex-col gap-6">
-      <Header kicker="COMPONENT KIT · EVERY PRIMITIVE" kana="部品" title="Kit" numeral="00" actions={<Button variant="primary" icon="play">Run stage</Button>} />
+      <Header kicker="COMPONENT KIT · EVERY PRIMITIVE" kana="部品" title="Kit" numeral="00" subtitle="Every primitive, rendered once. The RUN STAGE primary lives in the Buttons panel below." />
       <Panel title="Buttons" kana="ボタン">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="primary" icon="play">Run stage</Button><Button variant="magenta" icon="sparkle">Magenta</Button><Button variant="outline" icon="export">Outline</Button><Button variant="ghost" icon="refresh">Ghost</Button><Button variant="danger" icon="trash">Danger</Button>
