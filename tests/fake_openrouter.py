@@ -17,7 +17,8 @@ Routing (first match wins):
   2. a scripted responder keyed by the *model slug*;
   3. the built-in default responder for the detected stage (valid content for every stage so the
      full pipeline runs unscripted);
-  4. a generic plain-text answer.
+  4. otherwise the *responses* responder — an unlabelled call is a teacher call whose system prompt
+     is the user's own (it becomes training data, so it carries no `# stage:` header).
 
 Every call costs exactly `cost_per_call` (0.0021 USD) so budget tests are exact.
 Responders receive `(messages, kw)` and may return `str`, `dict` (JSON-encoded as content),
@@ -375,6 +376,12 @@ def _default_judge(messages: list[dict], kw: dict) -> dict:
         else:
             # deterministic fallback: prefer the longer (usually un-corrupted) answer, tie if equal
             out["verdict"] = "A" if len(ta) >= len(tb) else "B"
+        winner = {name: min(5, v) for name, v in criteria.items()}
+        loser = {name: max(1, v - 1) for name, v in criteria.items()}
+        if out["verdict"] == "tie":
+            loser = dict(winner)
+        out["a"], out["b"] = (winner, loser) if out["verdict"] != "B" else (loser, winner)
+        out["criteria"] = winner
     return out
 
 
@@ -396,8 +403,10 @@ def _default_simulated_user(messages: list[dict], kw: dict) -> str:
     return follow[seed % len(follow)]
 
 
-def _generic(messages: list[dict], kw: dict) -> str:
-    return _answer_body(_last_user_text(messages), _seed(_all_text(messages)))
+def _generic(messages: list[dict], kw: dict) -> str | CallResult:
+    """No stage header/hint: stage-3 teacher calls carry the user's own system prompt (it becomes
+    training data), so an unlabelled call is treated as a response call."""
+    return _default_response(messages, kw)
 
 
 DEFAULT_RESPONDERS: dict[str, Responder] = {

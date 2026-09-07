@@ -1,11 +1,23 @@
-"""judge API. Stubbed by the lead (501); owned by the team track named in the spec."""
+"""Judge API: score histogram, ties, same-family warning."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from ..db import get_session
+from ..models import Project
+from ..pipeline import judge
+
+DB = Annotated[Session, Depends(get_session)]
 
 router = APIRouter(prefix="/api/projects", tags=["judge"])
 
 
 @router.get("/{project_id}/judge/summary")
-async def get_project_id_judge_summary():
-    raise HTTPException(status_code=501, detail="not implemented")
+def judge_summary(project_id: str, session: DB):
+    project = session.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="project not found")
+    return judge.summary(session, project)

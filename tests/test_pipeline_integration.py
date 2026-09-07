@@ -12,7 +12,8 @@ import time
 from pathlib import Path
 
 import pytest
-from tests.fake_openrouter import FakeOpenRouter
+
+from fake_openrouter import FakeOpenRouter
 
 pytestmark = pytest.mark.integration
 
