@@ -45,12 +45,16 @@ def create_app() -> FastAPI:
     if FRONTEND_DIST.exists():
         app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
+        dist_root = FRONTEND_DIST.resolve()
+
         @app.get("/{full_path:path}", include_in_schema=False)
         async def spa(full_path: str):
-            candidate = FRONTEND_DIST / full_path
-            if full_path and candidate.is_file():
-                return FileResponse(candidate)
-            return FileResponse(FRONTEND_DIST / "index.html")
+            # Serve a real file only if it resolves inside dist; anything else gets the SPA shell.
+            if full_path:
+                candidate = (dist_root / full_path).resolve()
+                if candidate.is_relative_to(dist_root) and candidate.is_file():
+                    return FileResponse(candidate)
+            return FileResponse(dist_root / "index.html")
 
     return app
 
