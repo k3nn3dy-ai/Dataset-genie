@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+frontend/dist/
+exports/
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+docs/screenshots/*.tmp.png

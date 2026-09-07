@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&family=Rajdhani:wght@500;600&family=Share+Tech+Mono&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #06080b;
+  color: #d9e6ec;
+  font-family: Rajdhani, sans-serif;
+  font-weight: 500;
+  font-size: 14.5px;
+  -webkit-font-smoothing: antialiased;
+}
+@layer components {
+  .label { @apply font-mono text-label tracking-label uppercase text-muted; }
+  .panel { @apply bg-surface1 border border-line rounded-card backdrop-blur-md; }
+}
