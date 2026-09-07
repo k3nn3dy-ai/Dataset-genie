@@ -300,3 +300,19 @@ async def test_unknown_project_rejected(genie_home):
 
 def test_budget_exceeded_is_exception():
     assert issubclass(BudgetExceeded, Exception)
+
+
+async def test_start_without_key_raises_before_writing_a_run(project):
+    from genie import secrets
+    from genie.providers.openrouter import MissingApiKey, reset_client_cache
+
+    secrets.set_backend_for_tests({})
+    reset_client_cache()
+    try:
+        with pytest.raises(MissingApiKey):
+            await Runner().start(project_id=project, stage=1, params={}, items=items(2), handler=ok_handler,
+                                 model_slug=None, est_usd=0.0)
+    finally:
+        secrets.set_backend_for_tests(None)
+    with session_scope() as s:
+        assert s.query(Run).count() == 0 and s.query(RunItem).count() == 0

@@ -357,3 +357,72 @@ def test_model_family():
     assert model_family("x-ai/grok-2") == "x-ai"
     assert model_family("no-slash") == "no-slash"
     assert model_family("openai/gpt-4o:free") == "openai"
+
+
+# ----------------------------------------------------------------------------- prompt caching
+ANTHROPIC = "anthropic/claude-sonnet-4"
+SYS_MSGS = [{"role": "system", "content": "You are terse."}, {"role": "user", "content": "hi"}]
+
+
+async def test_prompt_caching_adds_cache_control_for_anthropic(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok", model=ANTHROPIC))
+    c = srv.client(prefer_prompt_caching=True)
+    await c.chat(ANTHROPIC, SYS_MSGS)
+    sent = srv.calls("/api/v1/chat/completions")[0]["messages"]
+    assert sent[0]["role"] == "system"
+    assert sent[0]["content"] == [
+        {"type": "text", "text": "You are terse.", "cache_control": {"type": "ephemeral"}}
+    ]
+    assert sent[1] == {"role": "user", "content": "hi"}  # non-system untouched
+    assert SYS_MSGS[0]["content"] == "You are terse."  # caller's list not mutated
+
+
+async def test_prompt_caching_google_and_parts_form(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok", model="google/gemini-pro"))
+    c = srv.client(prefer_prompt_caching=True)
+    msgs = [{"role": "system", "content": [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]},
+            {"role": "user", "content": "hi"}]
+    await c.chat("google/gemini-pro", msgs)
+    sent = srv.calls("/api/v1/chat/completions")[0]["messages"]
+    assert sent[0]["content"][0] == {"type": "text", "text": "a"}
+    assert sent[0]["content"][1] == {"type": "text", "text": "b", "cache_control": {"type": "ephemeral"}}
+
+
+async def test_prompt_caching_not_applied_to_openai_or_when_off(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok"))
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok", model=ANTHROPIC))
+    on = srv.client(prefer_prompt_caching=True)
+    await on.chat("openai/gpt-4o", SYS_MSGS)
+    off = srv.client()  # default: off
+    await off.chat(ANTHROPIC, SYS_MSGS)
+    calls = srv.calls("/api/v1/chat/completions")
+    assert calls[0]["messages"] == SYS_MSGS
+    assert calls[1]["messages"] == SYS_MSGS
+
+
+async def test_cache_token_details_surfaced_in_usage(srv):
+    body = completion("ok", model=ANTHROPIC, cost=0.001)
+    body["usage"]["prompt_tokens_details"] = {"cached_tokens": 900}
+    body["usage"]["cache_creation_input_tokens"] = 120
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, body)
+    c = srv.client(prefer_prompt_caching=True)
+    res = await c.chat(ANTHROPIC, SYS_MSGS)
+    assert res.usage["cache_read_tokens"] == 900
+    assert res.usage["cache_write_tokens"] == 120
+    # absent details -> keys absent (not None/0 noise)
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok"))
+    res2 = await c.chat("openai/gpt-4o", SYS_MSGS)
+    assert "cache_read_tokens" not in res2.usage and "cache_write_tokens" not in res2.usage
+
+
+async def test_get_client_reads_prefer_prompt_caching_from_settings(genie_home):
+    from genie.api.settings import save_settings
+    from genie.db import session_scope
+    from genie.providers.openrouter import get_client, reset_client_cache
+
+    reset_client_cache()
+    assert get_client(api_key="k").prefer_prompt_caching is True  # ProjectConfig default
+    with session_scope() as s:
+        save_settings(s, {"prefer_prompt_caching": False})
+    assert get_client(api_key="k").prefer_prompt_caching is False
+    reset_client_cache()

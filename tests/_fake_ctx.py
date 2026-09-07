@@ -100,9 +100,10 @@ class FakeCtx:
 
     async def call(self, *, target_id: str, model: str, messages: list[dict], est_usd: float = 0.0,
                    temperature: float | None = None, max_tokens: int | None = None,
-                   tools: list[dict] | None = None, response_format: dict | None = None) -> FakeCallResult:
+                   tools: list[dict] | None = None, response_format: dict | None = None,
+                   provider: dict | None = None) -> FakeCallResult:
         kw = {"temperature": temperature, "max_tokens": max_tokens, "tools": tools,
-              "response_format": response_format, "target_id": target_id}
+              "response_format": response_format, "provider": provider, "target_id": target_id}
         self.calls.append({"model": model, "messages": messages, **kw})
         out = self._respond(model, messages, kw)
         if isinstance(out, FakeCallResult):
@@ -114,8 +115,9 @@ class FakeCtx:
 
     async def call_structured(self, *, target_id: str, model: str, messages: list[dict], schema: type,
                               est_usd: float = 0.0, temperature: float | None = None,
-                              max_tokens: int | None = None, **_: Any):
-        kw = {"temperature": temperature, "max_tokens": max_tokens, "schema": schema, "target_id": target_id}
+                              max_tokens: int | None = None, provider: dict | None = None, **_: Any):
+        kw = {"temperature": temperature, "max_tokens": max_tokens, "schema": schema, "provider": provider,
+              "target_id": target_id}
         self.calls.append({"model": model, "messages": messages, **kw})
         out = self._respond(model, messages, kw)
         if isinstance(out, schema):

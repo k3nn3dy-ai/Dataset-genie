@@ -27,6 +27,8 @@ from ..models import CatalogueCache
 log = logging.getLogger(__name__)
 
 EMBEDDING_BATCH = 64
+# Providers that need an explicit cache_control breakpoint; OpenAI/DeepSeek/etc cache automatically.
+CACHE_CONTROL_FAMILIES = ("anthropic", "google")
 RETRY_BASE_SECONDS = 0.5
 RETRY_MAX_SECONDS = 30.0
 
@@ -155,6 +157,7 @@ class OpenRouterClient:
         max_retries: int = 5,
         timeout: float = 120.0,
         provider_defaults: dict | None = None,
+        prefer_prompt_caching: bool = False,
     ) -> None:
         settings = get_settings()
         self.api_key = api_key
@@ -163,6 +166,7 @@ class OpenRouterClient:
         self.referer = referer or settings.app_referer
         self.max_retries = max_retries
         self.provider_defaults = dict(provider_defaults or {})
+        self.prefer_prompt_caching = bool(prefer_prompt_caching)
         self._sleep = sleep
         self._headers = {"HTTP-Referer": self.referer, "X-Title": self.app_name}
         self._http = http_client or httpx2.AsyncClient(timeout=timeout)
@@ -244,6 +248,8 @@ class OpenRouterClient:
         prov = self._provider_block(provider, require_parameters=bool(tools or response_format))
         if prov:
             body["provider"] = prov
+        if self.prefer_prompt_caching and model_family(model) in CACHE_CONTROL_FAMILIES:
+            messages = _with_cache_control(messages)
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -260,7 +266,7 @@ class OpenRouterClient:
         resp = await self._with_retries(lambda: self._oa.chat.completions.create(**kwargs), "chat")
         latency_ms = int((time.perf_counter() - t0) * 1000)
         raw = resp.model_dump()
-        usage = dict(raw.get("usage") or {})
+        usage = _normalise_usage(raw.get("usage") or {})
         choice = (raw.get("choices") or [{}])[0]
         message = choice.get("message") or {}
         cost = usage.get("cost")
@@ -483,6 +489,51 @@ def _safe_json(r: httpx2.Response) -> Any:
         return {"error": {"message": r.text[:200]}}
 
 
+def _with_cache_control(messages: list[dict]) -> list[dict]:
+    """Mark system message content as an ephemeral cache breakpoint (OpenRouter content-parts form).
+    Returns new message dicts; the caller's list is not mutated."""
+    out: list[dict] = []
+    for m in messages:
+        if m.get("role") != "system" or m.get("content") in (None, ""):
+            out.append(m)
+            continue
+        m = dict(m)
+        content = m["content"]
+        if isinstance(content, str):
+            parts = [{"type": "text", "text": content}]
+        else:
+            parts = [dict(pt) for pt in content]
+        for pt in reversed(parts):
+            if pt.get("type") == "text":
+                pt.setdefault("cache_control", {"type": "ephemeral"})
+                break
+        m["content"] = parts
+        out.append(m)
+    return out
+
+
+def _normalise_usage(usage: dict) -> dict:
+    """Surface cache hit/write token counts under stable keys when the provider reports them."""
+    out = dict(usage)
+    details = out.get("prompt_tokens_details") or {}
+    read = _first_int(out.get("cache_read_tokens"), details.get("cached_tokens"),
+                      out.get("cache_read_input_tokens"))
+    write = _first_int(out.get("cache_write_tokens"), details.get("cache_write_tokens"),
+                       out.get("cache_creation_input_tokens"))
+    if read is not None:
+        out["cache_read_tokens"] = read
+    if write is not None:
+        out["cache_write_tokens"] = write
+    return out
+
+
+def _first_int(*values: Any) -> int | None:
+    for v in values:
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return int(v)
+    return None
+
+
 def _with_json_instruction(messages: list[dict], json_schema: dict) -> list[dict]:
     instruction = (
         "Respond with a single JSON object only (no prose, no markdown fences) that validates "
@@ -509,29 +560,39 @@ def _try_parse(schema: type[BaseModel], content: str | None) -> tuple[BaseModel 
 _client_cache: dict[tuple, OpenRouterClient] = {}
 
 
-def get_client(*, api_key: str | None = None, provider_defaults: dict | None = None) -> OpenRouterClient:
+def get_client(*, api_key: str | None = None, provider_defaults: dict | None = None,
+               prefer_prompt_caching: bool | None = None) -> OpenRouterClient:
     """Client from the stored API key + settings. Raises MissingApiKey (HTTP 400 semantics)."""
     from .. import secrets
 
     key = api_key or secrets.get_secret("openrouter")
     if not key:
         raise MissingApiKey()
-    if provider_defaults is None:
-        provider_defaults = provider_defaults_from_settings()
-    cache_key = (key, json.dumps(provider_defaults, sort_keys=True))
+    if provider_defaults is None or prefer_prompt_caching is None:
+        st = _load_settings()
+        if provider_defaults is None:
+            provider_defaults = provider_defaults_from_settings(st)
+        if prefer_prompt_caching is None:
+            prefer_prompt_caching = bool(st.get("prefer_prompt_caching", True))
+    cache_key = (key, json.dumps(provider_defaults, sort_keys=True), prefer_prompt_caching)
     client = _client_cache.get(cache_key)
     if client is None:
         _client_cache.clear()
-        client = OpenRouterClient(key, provider_defaults=provider_defaults)
+        client = OpenRouterClient(key, provider_defaults=provider_defaults,
+                                  prefer_prompt_caching=prefer_prompt_caching)
         _client_cache[cache_key] = client
     return client
 
 
-def provider_defaults_from_settings() -> dict:
+def _load_settings() -> dict:
     from ..api.settings import load_settings
 
     with session_scope() as s:
-        st = load_settings(s)
+        return load_settings(s)
+
+
+def provider_defaults_from_settings(st: dict | None = None) -> dict:
+    st = st if st is not None else _load_settings()
     block: dict[str, Any] = {}
     if st.get("provider_order"):
         block["order"] = list(st["provider_order"])

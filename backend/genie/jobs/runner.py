@@ -317,6 +317,7 @@ class Runner:
         if items is None:
             items = work or []
         items = [it if isinstance(it, WorkItem) else WorkItem.model_validate(it) for it in items]
+        client = self._resolve_client(client)  # raises MissingApiKey before any row is written
         with session_scope() as s:
             project = s.get(Project, project_id)
             if project is None:
@@ -339,6 +340,7 @@ class Runner:
         state = self._runs.get(run_id)
         if state is not None and state.task is not None and not state.task.done():
             raise ValueError(f"run {run_id} is still running")
+        client = self._resolve_client(client)  # raises MissingApiKey before touching the run
         with session_scope() as s:
             run = s.get(Run, run_id)
             if run is None:
@@ -366,10 +368,7 @@ class Runner:
     def _launch(self, run_id: str, project_id: str, stage: int, params: dict, handler: Handler,
                 cap: float, stop_at: int, concurrency: int, client: Any | None,
                 prior_spend: float = 0.0) -> None:
-        if client is None:
-            from ..providers.openrouter import get_client
-
-            client = get_client()
+        client = self._resolve_client(client)
         guard = BudgetGuard(project_id, cap, stop_at)
         events = RunEvents.for_run(run_id)
         if events.closed:  # resuming a finished run: fresh bus so DoneEvent can be published again
@@ -381,6 +380,14 @@ class Runner:
         state = _RunState(ctx, concurrency)
         self._runs[run_id] = state
         state.task = asyncio.create_task(self._execute(run_id, handler), name=f"run-{run_id}")
+
+    @staticmethod
+    def _resolve_client(client: Any | None) -> Any:
+        if client is not None:
+            return client
+        from ..providers import openrouter
+
+        return openrouter.get_client()
 
     async def cancel(self, run_id: str) -> None:
         state = self._runs.get(run_id)
