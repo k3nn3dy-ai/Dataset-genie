@@ -87,7 +87,10 @@ def test_summary_math_and_stage_statuses(client):
         s.add_all([Run(project_id=p.id, stage=1, status="done", created_at=1.0),
                    Run(project_id=p.id, stage=2, status="failed", created_at=2.0),
                    Run(project_id=p.id, stage=2, status="running", created_at=3.0),
-                   Run(project_id=p.id, stage=3, status="budget_stop", created_at=4.0)])
+                   Run(project_id=p.id, stage=3, status="done", created_at=4.0),
+                   Run(project_id=p.id, stage=3, status="budget_stop", created_at=5.0),  # re-run failed, rows exist
+                   Run(project_id=p.id, stage=4, status="paused", created_at=6.0),  # never finished -> paused
+                   Run(project_id=p.id, stage=5, status="cancelled", created_at=7.0)])
         s.commit()
         p.spend_usd = 1.2345
         s.commit()
@@ -97,11 +100,13 @@ def test_summary_math_and_stage_statuses(client):
     assert body["accepted"] == 2 and body["spend_usd"] == 1.2345 and body["cap_usd"] == 15.0
     assert body["refusals_by_model"] == {"unknown": 1} and body["refusals_by_leaf"] == {leaves[0].id: 1}
     stages = {st["stage"]: st for st in body["stages"]}
-    assert [stages[n]["status"] for n in range(1, 9)] == ["done", "running", "failed", "todo", "todo", "todo", "done", "todo"]
+    assert [stages[n]["status"] for n in range(1, 9)] == ["done", "running", "done", "paused", "failed", "todo", "done", "todo"]
+    assert stages[3]["latest_run_status"] == "budget_stop" and stages[3]["run_status"] == "budget_stop"
+    assert stages[4]["latest_run_status"] == "paused" and stages[5]["latest_run_status"] == "cancelled"
     assert stages[1]["count"] == 6 and stages[3]["count"] == 5 and stages[4]["count"] == 1 and stages[7]["count"] == 2
     assert stages[2]["run_id"]
     runs = client.get(f"/api/projects/{p.id}/runs").json()
-    assert runs["total"] == 4 and runs["items"][0]["stage"] == 3
+    assert runs["total"] == 7 and runs["items"][0]["stage"] == 5
     assert client.get(f"/api/projects/{p.id}/runs", params={"stage": 2}).json()["total"] == 2
     assert client.get("/api/projects/nope/summary").status_code == 404
 

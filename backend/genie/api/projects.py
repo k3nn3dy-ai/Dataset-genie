@@ -20,9 +20,6 @@ DB = Annotated[Session, Depends(get_session)]
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
-RUNNING = ("queued", "running", "paused")
-FAILED = ("failed", "cancelled", "budget_stop")
-
 
 class ProjectCreate(BaseModel):
     name: str
@@ -130,9 +127,17 @@ def _summary_counts(session: Session, project: Project) -> dict[str, Any]:
 
 
 def _stage_rows(session: Session, project: Project, counts: dict[str, Any]) -> list[dict[str, Any]]:
+    """Per-stage status: todo | running | paused | done | failed.
+
+    Derived from the latest run for the stage, except that a stage with an earlier `done` run and
+    produced output stays `done` when a later re-run failed/paused/was cancelled — the frontend reads
+    `latest_run_status` to show the re-run's state without hiding completed work."""
     latest: dict[int, Run] = {}
+    ever_done: set[int] = set()
     for run in session.scalars(select(Run).where(Run.project_id == project.id).order_by(Run.created_at)):
         latest[run.stage] = run
+        if run.status == "done":
+            ever_done.add(run.stage)
     prompts = _count(session, Prompt, Prompt.project_id == project.id, Prompt.status == "active")
     judgements = _count(session, Judgement, Judgement.project_id == project.id)
     exports = _count(session, Export, Export.project_id == project.id)
@@ -143,21 +148,29 @@ def _stage_rows(session: Session, project: Project, counts: dict[str, Any]) -> l
     out = []
     for n in range(1, 9):
         run = latest.get(n)
-        if run is None:
-            status = "todo"
-        elif run.status in RUNNING:
-            status = "running"
-        elif run.status == "done":
+        status = _stage_status(run.status if run else None)
+        if status in ("failed", "paused") and n in ever_done and per_stage_count[n] > 0:
             status = "done"
-        else:
-            status = "failed"
         if n == 7 and status == "todo" and counts["accepted"] > 0:
             status = "done"
         if n == 8 and status == "todo" and exports > 0:
             status = "done"
         out.append({"stage": n, "name": STAGE_NAMES[n], "status": status, "run_id": run.id if run else None,
-                    "run_status": run.status if run else None, "count": per_stage_count[n]})
+                    "run_status": run.status if run else None, "latest_run_status": run.status if run else None,
+                    "count": per_stage_count[n]})
     return out
+
+
+def _stage_status(run_status: str | None) -> str:
+    if run_status is None:
+        return "todo"
+    if run_status == "paused":
+        return "paused"
+    if run_status in ("queued", "running"):
+        return "running"
+    if run_status == "done":
+        return "done"
+    return "failed"  # failed | cancelled | budget_stop
 
 
 # ---------------------------------------------------------------- routes
