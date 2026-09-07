@@ -81,12 +81,13 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
                   <span className="font-mono text-[11px] text-muted tabular-nums text-right">{contextK(m.context_length)}</span>
                 </button>
               ))}
-              {list.length === 0 && <div className="px-3 py-6 text-center text-dim font-mono text-[11px]">No models match</div>}
+              {list.length === 0 && <div className="px-3 py-6 text-center text-dim font-mono text-[11px]">{(models.data ?? []).length === 0 ? 'Catalogue empty — set an OpenRouter key in Settings, then Refresh catalogue. You can still type a slug below.' : 'No models match'}</div>}
             </div>
           </div>
         )}
       </div>
       {warn && <div className="flex items-center gap-1.5 text-amber text-[12px]"><Icon name="warning" size={12} />{warn}</div>}
+      {compact && (models.data ?? []).length === 0 && <div className="flex items-center gap-2"><span className="label whitespace-nowrap">slug</span><Input value={value.slug} onChange={(e) => onChange({ ...value, slug: e.target.value })} placeholder="vendor/model" className="!h-7" /></div>}
       {!compact && (
         <div className="flex flex-col gap-2">
           <button type="button" onClick={() => setAdv((a) => !a)} className="self-start flex items-center gap-1 label hover:text-text">

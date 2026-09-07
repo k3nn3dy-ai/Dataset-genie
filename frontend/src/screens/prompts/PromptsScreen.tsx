@@ -17,7 +17,8 @@ export function PromptsScreen() {
   const [q, setQ] = useState('')
   const [leafFilter, setLeafFilter] = useState<string | null>(null)
   const leaves = useMemo(() => (tax.data ? flattenLeaves(tax.data) : []), [tax.data])
-  const items = prompts.data?.items ?? []
+  const leafById = useMemo(() => new Map(leaves.map((l) => [l.id, l])), [leaves])
+  const items = useMemo(() => (prompts.data?.items ?? []).map((p) => { const l = leafById.get(p.leaf_id); return l ? { ...p, leaf_path: l.path, difficulty: l.difficulty ?? p.difficulty } : p }), [prompts.data, leafById])
   const grouped = useMemo(() => {
     const m = new Map<string, typeof items>()
     for (const p of items) {

@@ -18,6 +18,8 @@ export const keys = {
   judge: (id: string) => ['judge', id] as const,
   filter: (id: string) => ['filter', id] as const,
   exports: (id: string) => ['exports', id] as const,
+  hf: (id: string) => ['hf', id] as const,
+  reviewStats: (id: string) => ['review-stats', id] as const,
   run: (runId: string) => ['run', runId] as const,
   runLog: (runId: string) => ['run-log', runId] as const,
   models: (q: string) => ['models', q] as const,
@@ -39,6 +41,8 @@ export const useRefusalMatrix = (id: string | undefined) => useQuery({ queryKey:
 export const useJudgeSummary = (id: string | undefined) => useQuery({ queryKey: keys.judge(id ?? ''), queryFn: () => data.getJudgeSummary(id!), enabled: !!id })
 export const useFilterSummary = (id: string | undefined) => useQuery({ queryKey: keys.filter(id ?? ''), queryFn: () => data.getFilterSummary(id!), enabled: !!id })
 export const useExports = (id: string | undefined) => useQuery({ queryKey: keys.exports(id ?? ''), queryFn: () => data.listExports(id!), enabled: !!id })
+export const useHfStatus = (id: string | undefined) => useQuery({ queryKey: keys.hf(id ?? ''), queryFn: () => data.hfStatus(id!), enabled: !!id })
+export const useReviewStats = (id: string | undefined) => useQuery({ queryKey: keys.reviewStats(id ?? ''), queryFn: () => data.reviewStats(id!), enabled: !!id })
 export const useRun = (runId: string | null) => useQuery({ queryKey: keys.run(runId ?? ''), queryFn: () => data.getRun(runId!), enabled: !!runId })
 export const useRunLog = (runId: string | null, live: boolean) => useQuery({ queryKey: keys.runLog(runId ?? ''), queryFn: () => data.getRunLog(runId!), enabled: !!runId, refetchInterval: live ? 1500 : false })
 export const useModels = (q = '') => useQuery({ queryKey: keys.models(q), queryFn: () => data.models(q), staleTime: 5 * 60_000 })

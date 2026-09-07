@@ -1,6 +1,6 @@
 // In-memory mock backend. Same surface as the real API (see data.ts); state is mutable for the session.
 import type { Estimate, ModelInfo, Pair, Paged, Project, ProjectConfig, ProjectSummary, Run, StageNumber, StageStatus, TopicNode } from './types'
-import type { ExportRecord, FilterSummary, JudgeSummary, Preset, PromptItem, RawCall, RefusalCell, RowItem, SecretsStatus, SettingsData } from './viewtypes'
+import type { ExportRecord, FilterSummary, HFStatus, JudgeSummary, Preset, PromptItem, RawCall, RefusalCell, ReviewStats, RowItem, SecretsStatus, SettingsData } from './viewtypes'
 import { MODEL_CATALOGUE, searchModels } from './mock/models'
 import { PRESETS, buildTaxonomy, defaultConfig, flattenLeaves, makeProject, slot } from './mock/project'
 import { generate } from './mock/rows'
@@ -47,7 +47,8 @@ function summary(s: ProjState): ProjectSummary {
 }
 
 let settings: SettingsData = {
-  default_models: { taxonomy: slot('anthropic/claude-sonnet-4', { temperature: 0.4 }), prompts: slot('openai/gpt-4o-mini', { temperature: 0.9 }), responses: slot('anthropic/claude-sonnet-4'), judge: slot('openai/gpt-4o', { temperature: 0 }), simulated_user: slot('openai/gpt-4o-mini', { temperature: 0.9 }) },
+  default_models: { taxonomy: slot('anthropic/claude-sonnet-4', { temperature: 0.4 }), prompts: slot('openai/gpt-4o-mini', { temperature: 0.9 }), responses: slot('anthropic/claude-sonnet-4'), judge: slot('openai/gpt-4o', { temperature: 0 }), simulated_user: slot('openai/gpt-4o-mini', { temperature: 0.9 }), weaker: slot('meta-llama/llama-3.1-8b-instruct') },
+  embedding_model: 'openai/text-embedding-3-small',
   budget_cap_usd: 15, stop_at_pct: 90, concurrency: 8, prefer_prompt_caching: true, allow_fallback_providers: true, pinned_provider: '',
 }
 let secrets: SecretsStatus = { openrouter: true, huggingface: true, hf_user: 'k3nn3dy' }
@@ -138,10 +139,12 @@ export const mockApi: DataApi = {
     const d = new Date()
     const p2 = (n: number) => String(n).padStart(2, '0')
     const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`
-    const rec: ExportRecord = { id: `x${Date.now()}`, created_at: Date.now() / 1000, formats: body.formats, path: `~/.dataset-genie/exports/${s.project.slug}/${stamp}`, rows_train: acc - ev, rows_eval: ev, hf_url: body.push ? `https://huggingface.co/datasets/${body.push.repo}` : null, status: 'ok' }
+    const rec: ExportRecord = { id: `x${Date.now()}`, created_at: Date.now() / 1000, formats: body.formats, path: `~/.dataset-genie/exports/${s.project.slug}/${stamp}`, rows_train: acc - ev, rows_eval: ev, hf_url: body.push ? `https://huggingface.co/datasets/${body.push.repo_id}` : null, status: 'ok', counts: { [body.formats[0]]: { train: acc - ev, eval: ev, total: acc } }, warnings: [], gated_out: body.gate_on_score ? 3 : 0 }
     s.exports.unshift(rec); return delay(rec, 900)
   },
   listExports: (id) => delay(need(id).exports),
+  reviewStats: (id) => { const s = need(id); const by: Record<string, number> = {}; const flags: Record<string, number> = {}; for (const r of s.rows) { by[r.status] = (by[r.status] ?? 0) + 1; for (const f of r.metadata.flags) flags[f] = (flags[f] ?? 0) + 1 } const out: ReviewStats = { total: s.rows.length, by_status: by, flags, edited: flags.edited ?? 0, pairs: s.pairs.length, exportable: s.rows.filter((r) => r.status !== 'filtered' && r.status !== 'refusal').length }; return delay(out) },
+  hfStatus: () => delay({ has_token: secrets.huggingface, username: secrets.hf_user ?? null } as HFStatus),
   models: (q) => delay(searchModels(q)),
   refreshModels: () => delay(MODEL_CATALOGUE as ModelInfo[], 800),
   getSettings: () => delay(settings),

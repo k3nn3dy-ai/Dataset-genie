@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import type { ExportFormat, HFPushConfig } from '../../lib/types'
-import type { SecretsStatus } from '../../lib/viewtypes'
+import type { HFStatus } from '../../lib/viewtypes'
 import { Chip, Field, Icon, Input, Panel, Segmented, Select } from '../../components'
 
 const FORMATS: { key: ExportFormat; label: string; trainer: string; shape: string }[] = [
@@ -48,10 +48,10 @@ export function BundleTree({ slug, formats }: { slug: string; formats: ExportFor
 
 const LICENSES = ['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nc-4.0', 'apache-2.0', 'mit', 'odc-by', 'other']
 
-export function HFPanel({ hf, onChange, status }: { hf: HFPushConfig; onChange: (h: HFPushConfig) => void; status: SecretsStatus | undefined }) {
-  const ok = !!status?.huggingface
+export function HFPanel({ hf, onChange, status }: { hf: HFPushConfig; onChange: (h: HFPushConfig) => void; status: HFStatus | undefined }) {
+  const ok = !!status?.has_token
   return (
-    <Panel title="Hugging Face Hub" kana="公開" actions={<Chip tone={ok ? 'acid' : 'amber'}>{ok ? `token · ${status?.hf_user ?? 'ok'}` : 'no token'}</Chip>}>
+    <Panel title="Hugging Face Hub" kana="公開" actions={<Chip tone={ok ? 'acid' : 'amber'}>{ok ? `token · ${status?.username ?? 'ok'}` : 'no token'}</Chip>}>
       <div className="flex flex-col gap-3">
         <Field label="repo" hint="user/name"><Input value={hf.repo_id} onChange={(e) => onChange({ ...hf, repo_id: e.target.value })} placeholder="user/dataset-name" /></Field>
         <div className="flex items-center justify-between"><span className="label">visibility</span><Segmented options={[{ key: 'private', label: 'Private' }, { key: 'public', label: 'Public' }]} value={hf.private ? 'private' : 'public'} onChange={(k) => onChange({ ...hf, private: k === 'private' })} /></div>

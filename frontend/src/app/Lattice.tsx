@@ -126,7 +126,7 @@ export function Lattice({ seed = 4242, className }: { seed?: number; className?:
   }, [seed])
 
   return (
-    <div aria-hidden className={className} style={{ maskImage: 'linear-gradient(to bottom, transparent 0, black 180px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, black 180px)' }}>
+    <div aria-hidden className={className} style={{ maskImage: 'linear-gradient(to bottom, transparent 0, rgba(0,0,0,.35) 150px, black 260px)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, rgba(0,0,0,.35) 150px, black 260px)' }}>
       <canvas ref={ref} className="block" />
     </div>
   )

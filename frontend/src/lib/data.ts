@@ -1,11 +1,13 @@
 // Data access layer. One interface, two implementations (real API / mock). Screens only use `data`.
-import { ApiError, api, subscribeRun } from './api'
-import type { Estimate, FilterConfig, Message, ModelInfo, Pair, Paged, Project, ProjectConfig, ProjectSummary, Run, RunEvent, TopicNode } from './types'
-import type { ExportRecord, FilterSummary, JudgeSummary, Preset, PromptItem, RawCall, RefusalCell, RowItem, SecretsStatus, SettingsData } from './viewtypes'
+import { ApiError, subscribeRun } from './api'
+import type { Estimate, ExportFormat, FilterConfig, HFPushConfig, Message, ModelInfo, Pair, Paged, Project, ProjectConfig, ProjectSummary, Run, RunEvent, TemplateName, TopicNode } from './types'
+import type { ExportRecord, FilterSummary, HFStatus, JudgeSummary, Preset, PromptItem, RawCall, RefusalCell, ReviewStats, RowItem, SecretsStatus, SettingsData } from './viewtypes'
+import { realApi } from './real'
 import { useStore } from '../app/store'
 
 export interface RowQuery { status?: string; leaf?: string; q?: string; min_score?: number; flags?: string[]; page?: number; page_size?: number }
-export interface ExportRequest { formats: ExportRecord['formats']; split: number; eval_split: number; stratify_by: string; validate_template: string | null; include_scores: boolean; push?: { repo: string; private: boolean; license: string; tag: string } | null }
+/** Mirrors backend `export.ExportRequest`. */
+export interface ExportRequest { formats: ExportFormat[]; eval_split: number; stratify_by: 'leaf' | 'topic' | 'difficulty' | 'none'; validate_template: TemplateName | null; include_judge_scores: boolean; gate_on_score: boolean; gate_threshold: number; seed: number; push: HFPushConfig | null }
 export type RowAction = 'accept' | 'flag' | 'unflag' | 'restore'
 
 export interface DataApi {
@@ -39,6 +41,8 @@ export interface DataApi {
   subscribeRun(runId: string, onEvent: (ev: RunEvent) => void): () => void
   exportBundle(id: string, body: ExportRequest): Promise<ExportRecord>
   listExports(id: string): Promise<ExportRecord[]>
+  hfStatus(id: string): Promise<HFStatus>
+  reviewStats(id: string): Promise<ReviewStats>
   models(q: string): Promise<ModelInfo[]>
   refreshModels(): Promise<ModelInfo[]>
   getSettings(): Promise<SettingsData>
@@ -47,63 +51,6 @@ export interface DataApi {
   setSecret(name: 'openrouter' | 'huggingface', value: string): Promise<void>
   deleteSecret(name: 'openrouter' | 'huggingface'): Promise<void>
   presets(): Promise<Preset[]>
-}
-
-const qs = (o: Record<string, unknown>): string => {
-  const p = new URLSearchParams()
-  for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== '' && v !== null) p.set(k, Array.isArray(v) ? v.join(',') : String(v))
-  const s = p.toString()
-  return s ? `?${s}` : ''
-}
-
-const realApi: DataApi = {
-  listProjects: () => api.get('/projects'),
-  getProject: (id) => api.get(`/projects/${id}`),
-  getSummary: (id) => api.get(`/projects/${id}/summary`),
-  createProject: (b) => api.post('/projects/from-preset', b),
-  patchProject: (id, patch) => api.patch(`/projects/${id}`, patch),
-  deleteProject: (id) => api.del(`/projects/${id}`),
-  getTaxonomy: (id) => api.get(`/projects/${id}/taxonomy`),
-  putTaxonomy: (id, tree) => api.put(`/projects/${id}/taxonomy`, tree),
-  getPrompts: (id, q) => api.get(`/projects/${id}/prompts${qs(q)}`),
-  resamplePrompts: (id, leaf) => api.post(`/projects/${id}/prompts/resample`, { leaf_id: leaf }),
-  getRows: (id, q) => api.get(`/projects/${id}/rows${qs({ ...q })}`),
-  getRow: (id, rid) => api.get(`/projects/${id}/rows/${rid}`),
-  patchRow: (id, rid, patch) => api.patch(`/projects/${id}/rows/${rid}`, patch),
-  bulkRows: (id, ids, action) => api.post(`/projects/${id}/rows/bulk`, { ids, action }),
-  getPairs: (id) => api.get(`/projects/${id}/pairs`),
-  getRefusals: (id) => api.get(`/projects/${id}/refusals`),
-  getRefusalMatrix: async (id) => {
-    const rows = await api.get<Paged<RowItem>>(`/projects/${id}/rows?page_size=2000`)
-    const cells = new Map<string, RefusalCell>()
-    for (const r of rows.items) {
-      const key = `${r.metadata.models.responses}|${r.metadata.leaf_path[0]}`
-      const c = cells.get(key) ?? { model: r.metadata.models.responses, topic: r.metadata.leaf_path[0], refusals: 0, total: 0 }
-      c.total++; if (r.status === 'refusal') c.refusals++; cells.set(key, c)
-    }
-    return [...cells.values()]
-  },
-  getJudgeSummary: (id) => api.get(`/projects/${id}/judge/summary`),
-  getFilterSummary: (id) => api.get(`/projects/${id}/filter/summary`),
-  runFilter: (id, cfg) => api.post(`/projects/${id}/filter/run`, cfg),
-  restoreRows: (id, ids) => api.post(`/projects/${id}/filter/restore`, { ids }),
-  estimate: (id, stage, params) => api.post(`/projects/${id}/stages/${stage}/estimate`, { params }),
-  runStage: (id, stage, params) => api.post(`/projects/${id}/stages/${stage}/run`, { params }),
-  getRun: (runId) => api.get(`/runs/${runId}`),
-  cancelRun: (runId) => api.post(`/runs/${runId}/cancel`),
-  resumeRun: (runId) => api.post(`/runs/${runId}/resume`),
-  getRunLog: (runId) => api.get(`/runs/${runId}/log`),
-  subscribeRun: (runId, onEvent) => subscribeRun(runId, onEvent),
-  exportBundle: (id, body) => api.post(`/projects/${id}/export`, body),
-  listExports: (id) => api.get(`/projects/${id}/exports`),
-  models: (q) => api.get(`/models${qs({ q })}`),
-  refreshModels: () => api.get('/models/refresh'),
-  getSettings: () => api.get('/settings'),
-  putSettings: (s) => api.put('/settings', s),
-  secretsStatus: () => api.get('/settings/secrets/status'),
-  setSecret: (name, value) => api.put('/settings/secrets', { name, value }),
-  deleteSecret: (name) => api.del(`/settings/secrets/${name}`),
-  presets: () => api.get('/presets'),
 }
 
 /** Fall back to mock when the backend is absent (network error / proxy 502-504) or a route is still a 501 stub. */

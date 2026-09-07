@@ -3,12 +3,12 @@ import { Header } from '../../app/Header'
 import { KANA } from '../../lib/types'
 import type { SettingsData } from '../../lib/viewtypes'
 import { usePutSettings, useRefreshModels, useSettings } from '../../lib/queries'
-import { Banner, Button, ErrorState, Field, ModelPicker, NumberInput, Panel, Select, Slider, Spinner, Toggle } from '../../components'
+import { Banner, Button, ErrorState, Field, Input, ModelPicker, NumberInput, Panel, Select, Slider, Spinner, Toggle } from '../../components'
 import { SecretRow } from './SecretRow'
 
 const STAGE_SLOTS: { key: keyof SettingsData['default_models']; label: string; kana: string }[] = [
   { key: 'taxonomy', label: 'Stage 01 · Taxonomy', kana: '分類' }, { key: 'prompts', label: 'Stage 02 · Prompts', kana: 'プロンプト' }, { key: 'responses', label: 'Stage 03 · Teacher', kana: '応答' },
-  { key: 'judge', label: 'Stage 05 · Judge', kana: '審査' }, { key: 'simulated_user', label: 'Simulated user', kana: '対話' },
+  { key: 'judge', label: 'Stage 05 · Judge', kana: '審査' }, { key: 'simulated_user', label: 'Simulated user', kana: '対話' }, { key: 'weaker', label: 'Stage 04 · Weaker model', kana: '却下' },
 ]
 const PROVIDERS = ['', 'anthropic', 'openai', 'google', 'together', 'fireworks', 'deepinfra', 'groq']
 
@@ -59,10 +59,11 @@ export function SettingsScreen() {
             <div className="grid grid-cols-2 gap-4">
               {STAGE_SLOTS.map((s) => (
                 <div key={s.key} className="rounded-card border border-line bg-bg/40 p-3">
-                  <ModelPicker label={`${s.label} · ${s.kana}`} value={draft.default_models[s.key]} onChange={(m) => set({ default_models: { ...draft.default_models, [s.key]: m } })} />
+                  <ModelPicker compact label={`${s.label} · ${s.kana}`} value={draft.default_models[s.key]} onChange={(m) => set({ default_models: { ...draft.default_models, [s.key]: m } })} />
                 </div>
               ))}
             </div>
+            <div className="mt-4"><Field label="embedding model" hint="near-dup guard"><Input value={draft.embedding_model} onChange={(e) => set({ embedding_model: e.target.value })} /></Field></div>
             <p className="font-mono text-[10.5px] text-dim mt-4">Defaults seed new projects; each project can override every slot. Prices shown are OpenRouter list prices per 1M tokens.</p>
           </Panel>
         </div>

@@ -48,12 +48,20 @@ export interface ExportRecord {
   rows_eval: number
   hf_url?: string | null
   status: 'ok' | 'failed'
+  counts?: Record<string, { train?: number; eval?: number; total?: number }>
+  warnings?: string[]
+  gated_out?: number
 }
+
+export interface ReviewStats { total: number; by_status: Record<string, number>; flags: Record<string, number>; edited: number; pairs: number; exportable: number }
+
+export interface HFStatus { has_token: boolean; username: string | null }
 
 export interface Preset { id: string; name: string; description: string; data_types: string[] }
 
 export interface SettingsData {
-  default_models: Record<'taxonomy' | 'prompts' | 'responses' | 'judge' | 'simulated_user', ModelSlot>
+  default_models: Record<'taxonomy' | 'prompts' | 'responses' | 'judge' | 'simulated_user' | 'weaker', ModelSlot>
+  embedding_model: string
   budget_cap_usd: number
   stop_at_pct: number
   concurrency: number
