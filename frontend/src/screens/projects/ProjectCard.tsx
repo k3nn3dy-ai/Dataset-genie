@@ -37,9 +37,9 @@ export function ProjectCard({ project, onDelete }: { project: Project; onDelete:
       {/* Stage status dots */}
       <div className="flex items-center gap-1.5" aria-label="Stage status">
         {STAGES.map((st) => {
-          const status = s?.stages.find((x) => x.stage === st.n)?.status ?? 'todo'
+          const status: string = s?.stages.find((x) => x.stage === st.n)?.status ?? 'todo'
           return (
-            <span key={st.n} title={`${st.title}: ${status}`} className={clsx('h-1.5 flex-1 rounded-full', status === 'done' && 'bg-cyan shadow-[0_0_6px_rgba(0,240,255,.6)]', status === 'running' && 'bg-acid pulse-dot', status === 'failed' && 'bg-red', status === 'todo' && 'bg-line2')} />
+            <span key={st.n} title={`${st.title}: ${status}`} className={clsx('h-1.5 flex-1 rounded-full', status === 'done' && 'bg-cyan shadow-[0_0_6px_rgba(0,240,255,.6)]', status === 'running' && 'bg-acid pulse-dot', status === 'paused' && 'bg-amber shadow-[0_0_6px_rgba(255,176,32,.6)] ring-1 ring-amber/50', status === 'failed' && 'bg-red', status === 'todo' && 'bg-line2')} />
           )
         })}
         <span className="font-mono text-[10px] text-muted ml-1 tabular-nums">{done}/8</span>

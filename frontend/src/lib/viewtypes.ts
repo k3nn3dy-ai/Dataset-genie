@@ -55,6 +55,9 @@ export interface ExportRecord {
 
 export interface ReviewStats { total: number; by_status: Record<string, number>; flags: Record<string, number>; edited: number; pairs: number; exportable: number }
 
+/** Stage status incl. `paused` (resumable) which the backend reports in /summary. */
+export type StageState = 'todo' | 'running' | 'paused' | 'done' | 'failed'
+
 export interface HFStatus { has_token: boolean; username: string | null }
 
 export interface Preset { id: string; name: string; description: string; data_types: string[] }

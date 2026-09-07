@@ -3,16 +3,23 @@ import type { RawCall } from '../viewtypes'
 import { mulberry32, pick } from '../rng'
 
 // Simulated run: emits a believable SSE-like event stream over ~12 seconds.
-export interface MockRunState { id: string; stage: number; total: number; status: RunStatus; started: number; cancelled: boolean; calls: RawCall[] }
+export interface MockRunState { id: string; stage: number; total: number; status: RunStatus; started: number; cancelled: boolean; calls: RawCall[]; done0: number }
 const runs = new Map<string, MockRunState>()
 let counter = 100
 
 export function startMockRun(stage: number, total: number): MockRunState {
   const id = `run_${(++counter).toString(36)}`
-  const st: MockRunState = { id, stage, total, status: 'running', started: Date.now(), cancelled: false, calls: [] }
+  const st: MockRunState = { id, stage, total, status: 'running', started: Date.now(), cancelled: false, calls: [], done0: 0 }
   runs.set(id, st)
   return st
 }
+/** A run that was interrupted part-way (status paused) — resumable from `done0`. */
+export function seedPausedRun(id: string, stage: number, total: number, done: number): MockRunState {
+  const st: MockRunState = { id, stage, total, status: 'paused', started: Date.now() - 600_000, cancelled: false, calls: [], done0: done }
+  runs.set(id, st)
+  return st
+}
+export function resumeMockRun(id: string): void { const r = runs.get(id); if (r) { r.status = 'running'; r.cancelled = false; r.started = Date.now() } }
 export function getMockRun(id: string): MockRunState | undefined { return runs.get(id) }
 export function cancelMockRun(id: string): void { const r = runs.get(id); if (r) r.cancelled = true }
 
@@ -23,7 +30,7 @@ export function subscribeMockRun(runId: string, onEvent: (ev: RunEvent) => void)
   const st = runs.get(runId)
   if (!st) return () => undefined
   const rnd = mulberry32(counter * 31 + st.stage)
-  let done = 0
+  let done = st.done0
   let refusals = 0
   let errors = 0
   let spend = 0

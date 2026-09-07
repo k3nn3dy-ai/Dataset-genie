@@ -40,7 +40,7 @@ export interface ProjectConfig {
 }
 
 export interface Project { id: string; slug: string; name: string; domain_brief: string; preset?: string | null; data_types: DataType[]; config: ProjectConfig; budget_cap_usd: number; stop_at_pct: number; spend_usd: number; created_at: number; updated_at: number }
-export interface StageStatus { stage: StageNumber; status: 'todo' | 'running' | 'done' | 'failed'; run_id?: string | null; count: number }
+export interface StageStatus { stage: StageNumber; status: 'todo' | 'running' | 'paused' | 'done' | 'failed'; run_id?: string | null; run_status?: RunStatus | null; latest_run_status?: RunStatus | null; count: number }
 export interface ProjectSummary { project: Project; stages: StageStatus[]; rows: number; pairs: number; refusals: number; filtered: number; accepted: number; spend_usd: number; cap_usd: number; target_rows: number }
 export interface Run { id: string; project_id: string; stage: StageNumber; status: RunStatus; model_slug?: string | null; params: Record<string, unknown>; done: number; total: number; errors: number; refusals: number; spend_usd: number; est_usd: number; error_message?: string | null; started_at?: number | null; finished_at?: number | null }
 export interface Estimate { est_usd: number; calls: number; est_tokens_in: number; est_tokens_out: number; over_cap: boolean }

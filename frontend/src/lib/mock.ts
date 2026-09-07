@@ -4,11 +4,11 @@ import type { ExportRecord, FilterSummary, HFStatus, JudgeSummary, Preset, Promp
 import { MODEL_CATALOGUE, searchModels } from './mock/models'
 import { PRESETS, buildTaxonomy, defaultConfig, flattenLeaves, makeProject, slot } from './mock/project'
 import { generate } from './mock/rows'
-import { cancelMockRun, getMockRun, startMockRun, subscribeMockRun } from './mock/run'
+import { cancelMockRun, getMockRun, resumeMockRun, seedPausedRun, startMockRun, subscribeMockRun } from './mock/run'
 import { modelFamily } from './format'
 import type { DataApi, RowQuery } from './data'
 
-interface ProjState { project: Project; tree: TopicNode[]; prompts: PromptItem[]; rows: RowItem[]; pairs: Pair[]; stagesDone: number; exports: ExportRecord[]; restored: Set<string> }
+interface ProjState { project: Project; tree: TopicNode[]; prompts: PromptItem[]; rows: RowItem[]; pairs: Pair[]; stagesDone: number; exports: ExportRecord[]; restored: Set<string>; paused?: { stage: number; runId: string } | null }
 const state = new Map<string, ProjState>()
 
 function seedDemo(): void {
@@ -22,7 +22,8 @@ function seedDemo(): void {
   const k8s = makeProject('p_k8s', 'Kubernetes runbooks', 'Cluster operators asking about pod scheduling, networking and rollout failures.', 'domain-expert', { data_types: ['sft'], budget_cap_usd: 25 }, 3.1)
   const k8sTree = buildTaxonomy().slice(0, 2)
   const k8sGen = generate(k8sTree, k8s.slug, 11)
-  state.set(k8s.id, { project: k8s, tree: k8sTree, prompts: k8sGen.prompts, rows: [], pairs: [], stagesDone: 2, exports: [], restored: new Set() })
+  seedPausedRun('run_paused', 3, k8sGen.prompts.length, 17)
+  state.set(k8s.id, { project: k8s, tree: k8sTree, prompts: k8sGen.prompts, rows: k8sGen.rows.slice(0, 17), pairs: [], stagesDone: 2, exports: [], restored: new Set(), paused: { stage: 3, runId: 'run_paused' } })
   const fresh = makeProject('p_grafana', 'Grafana alert explainer', 'Explain firing alerts in plain language and propose the first check.', 'domain-expert', { data_types: ['sft'] }, 0)
   state.set(fresh.id, { project: fresh, tree: [], prompts: [], rows: [], pairs: [], stagesDone: 0, exports: [], restored: new Set() })
 }
@@ -34,8 +35,8 @@ const paged = <T,>(items: T[], page = 1, size = 50): Paged<T> => ({ items: items
 
 function summary(s: ProjState): ProjectSummary {
   const stages: StageStatus[] = ([1, 2, 3, 4, 5, 6, 7, 8] as StageNumber[]).map((n) => ({
-    stage: n, status: n <= s.stagesDone ? 'done' : n === s.stagesDone + 1 && s.stagesDone > 0 ? 'running' : 'todo',
-    run_id: null, count: n === 1 ? flattenLeaves(s.tree).length : n === 2 ? s.prompts.length : n === 4 ? s.pairs.length : n === 8 ? s.exports.length : s.rows.length,
+    stage: n, status: (s.paused?.stage === n ? 'paused' : n <= s.stagesDone ? 'done' : n === s.stagesDone + 1 && s.stagesDone > 0 ? 'running' : 'todo') as StageStatus['status'],
+    run_id: s.paused?.stage === n ? s.paused.runId : null, count: n === 1 ? flattenLeaves(s.tree).length : n === 2 ? s.prompts.length : n === 4 ? s.pairs.length : n === 8 ? s.exports.length : s.rows.length,
   }))
   const leaves = flattenLeaves(s.tree).length
   return {
@@ -129,9 +130,9 @@ export const mockApi: DataApi = {
   restoreRows: (id, ids) => { const s = need(id); s.rows = s.rows.map((r) => (ids.includes(r.metadata.id) ? { ...r, status: 'accepted', filter_reason: null } : r)); return delay(undefined) },
   estimate: (id, stage) => { const s = need(id); const calls = Math.max(12, stage === 1 ? 4 : stage === 2 ? flattenLeaves(s.tree).length || 20 : s.prompts.length || 80); const est: Estimate = { est_usd: Math.round(calls * (stage === 5 ? 0.011 : 0.018) * 100) / 100, calls, est_tokens_in: calls * 1400, est_tokens_out: calls * 620, over_cap: false }; est.over_cap = s.project.spend_usd + est.est_usd > s.project.budget_cap_usd; return delay(est, 500) },
   runStage: (id, stage) => { const s = need(id); const total = stage === 1 ? 4 : stage === 2 ? Math.max(20, flattenLeaves(s.tree).length) : Math.max(40, s.prompts.length); const r = startMockRun(stage, total); return delay({ run_id: r.id }, 300) },
-  getRun: (runId) => { const r = getMockRun(runId); if (!r) throw new Error('run not found'); const run: Run = { id: r.id, project_id: 'p_linux', stage: r.stage as StageNumber, status: r.status, params: {}, done: r.calls.length, total: r.total, errors: r.calls.filter((c) => c.status === 'error').length, refusals: r.calls.filter((c) => c.status === 'refusal').length, spend_usd: r.calls.reduce((a, c) => a + c.cost_usd, 0), est_usd: 1.2, started_at: r.started / 1000 }; return delay(run) },
-  cancelRun: (runId) => { cancelMockRun(runId); return delay(undefined) },
-  resumeRun: () => delay(undefined),
+  getRun: (runId) => { const r = getMockRun(runId); if (!r) throw new Error('run not found'); const run: Run = { id: r.id, project_id: 'p_linux', stage: r.stage as StageNumber, status: r.status, params: {}, done: r.done0 + r.calls.length, total: r.total, errors: r.calls.filter((c) => c.status === 'error').length, refusals: r.calls.filter((c) => c.status === 'refusal').length, spend_usd: r.calls.reduce((a, c) => a + c.cost_usd, 0), est_usd: 1.2, started_at: r.started / 1000 }; return delay(run) },
+  cancelRun: (runId) => { cancelMockRun(runId); for (const s of state.values()) if (s.paused?.runId === runId) s.paused = null; return delay(undefined) },
+  resumeRun: (runId) => { resumeMockRun(runId); for (const s of state.values()) if (s.paused?.runId === runId) s.paused = null; return delay(undefined, 300) },
   getRunLog: (runId) => { const r = getMockRun(runId); const calls: RawCall[] = r ? [...r.calls].reverse() : []; return delay(paged(calls, 1, 200)) },
   subscribeRun: (runId, onEvent) => subscribeMockRun(runId, onEvent),
   exportBundle: (id, body) => {

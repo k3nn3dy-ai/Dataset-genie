@@ -6,13 +6,14 @@ import { useStore } from './store'
 import { Icon } from '../components/Icon'
 import { BudgetBar } from './BudgetBar'
 import { pad2 } from '../lib/format'
+import type { StageState } from '../lib/viewtypes'
 
 export function Rail() {
   const { projectId } = useParams()
   const summary = useSummary(projectId)
   const mock = useStore((s) => s.mock)
   const project = summary.data?.project
-  const stageStatus = (n: number) => summary.data?.stages.find((s) => s.stage === n)?.status ?? 'todo'
+  const stageStatus = (n: number): StageState => (summary.data?.stages.find((s) => s.stage === n)?.status as StageState | undefined) ?? 'todo'
 
   return (
     <aside className="w-[236px] shrink-0 sticky top-0 h-screen flex flex-col border-r border-line bg-surface1 backdrop-blur-md z-20">
@@ -52,7 +53,7 @@ export function Rail() {
                   {({ isActive }) => (
                     <>
                       {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-cyan shadow-glow" />}
-                      <StageBadge n={s.n} state={isActive ? 'active' : st === 'done' ? 'done' : st === 'running' ? 'running' : 'todo'} />
+                      <StageBadge n={s.n} state={isActive ? 'active' : st === 'done' || st === 'running' || st === 'paused' || st === 'failed' ? st : 'todo'} />
                       <span className={clsx('font-ui font-semibold text-[14px] flex-1 truncate', isActive && 'text-cyan')}>{s.title}</span>
                       <span className={clsx('font-mono text-[10px]', isActive ? 'text-cyan/80' : 'text-dim')}>{s.kana}</span>
                     </>
@@ -90,16 +91,18 @@ function RailLink({ to, icon, label, kana, end }: { to: string; icon: 'folder' |
   )
 }
 
-function StageBadge({ n, state }: { n: number; state: 'done' | 'active' | 'todo' | 'running' }) {
+function StageBadge({ n, state }: { n: number; state: 'done' | 'active' | 'todo' | 'running' | 'paused' | 'failed' }) {
   return (
     <span className={clsx(
       'w-6 h-6 rounded-[6px] flex items-center justify-center font-mono text-[11px] shrink-0 border',
       state === 'active' && 'bg-cyan text-bg border-cyan shadow-glow font-bold',
       state === 'done' && 'bg-bg/80 text-cyan border-line2',
       state === 'running' && 'bg-bg/80 text-acid border-acid/60',
+      state === 'paused' && 'bg-bg/80 text-amber border-amber/70 shadow-[0_0_10px_rgba(255,176,32,.35)]',
+      state === 'failed' && 'bg-bg/80 text-red border-red/60',
       state === 'todo' && 'bg-transparent text-dim border-line2',
     )}>
-      {state === 'done' ? <Icon name="check" size={12} strokeWidth={2.4} /> : state === 'running' ? <span className="w-2 h-2 rounded-full bg-acid pulse-dot" /> : pad2(n)}
+      {state === 'done' ? <Icon name="check" size={12} strokeWidth={2.4} /> : state === 'running' ? <span className="w-2 h-2 rounded-full bg-acid pulse-dot" /> : state === 'paused' ? <Icon name="pause" size={11} strokeWidth={2.6} title="Paused — resumable" /> : state === 'failed' ? <Icon name="warning" size={11} strokeWidth={2.2} /> : pad2(n)}
     </span>
   )
 }

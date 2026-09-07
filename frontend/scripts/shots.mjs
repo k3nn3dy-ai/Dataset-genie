@@ -21,6 +21,7 @@ const routes = [
   ['08-export', `/p/${PROJECT}/8`],
   ['settings', '/settings'],
   ['empty-project', '/p/p_grafana/3'],
+  ['paused-stage', '/p/p_k8s/3'],
 ]
 const OUT = REAL ? '.screens-real' : '.screens'
 mkdirSync(OUT, { recursive: true })
@@ -31,7 +32,7 @@ page.on('pageerror', (e) => errors.push(`${page.url()} :: ${e.message}`))
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`${page.url()} :: console: ${m.text()}`) })
 for (const [name, path] of routes) {
   if (only.length && !only.includes(name)) continue
-  if (REAL && name === 'empty-project') continue
+  if (REAL && (name === 'empty-project' || name === 'paused-stage')) continue
   await page.goto(`${base}${path}${path.includes('?') ? '&' : '?'}${flag}`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(900)
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: false })

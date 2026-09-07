@@ -8,6 +8,7 @@ import { useEstimate, useRunStage, useSummary } from '../../lib/queries'
 import { pad2 } from '../../lib/format'
 import { Button, EmptyState, ErrorState, EstimateModal, RunMonitor, Spinner } from '../../components'
 import { ApiError } from '../../lib/api'
+import { PausedBanner } from './PausedBanner'
 import type { RunStatus } from '../../lib/types'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -53,6 +54,8 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
   const activeRuns = useStore((s) => s.activeRuns)
   const setActiveRun = useStore((s) => s.setActiveRun)
   const runId = projectId ? activeRuns[runKey(projectId, stage)] ?? null : null
+  const stageEntry = summary.data?.stages.find((s) => s.stage === stage)
+  const pausedRunId = (stageEntry?.status as string | undefined) === 'paused' && stageEntry?.run_id ? stageEntry.run_id : null
   const estimate = useEstimate(projectId, stage)
   const run = useRunStage(projectId, stage)
   const [estOpen, setEstOpen] = useState(false)
@@ -100,7 +103,10 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
           {blocked ? (
             <EmptyState icon="warning" title={blocked.title} body={blocked.body} action={blocked.stage ? { label: `Go to stage ${pad2(blocked.stage)}`, onClick: () => navigate(`/p/${projectId}/${blocked.stage}`), icon: 'arrowRight' } : undefined} />
           ) : (
-            <RunMonitor runId={runId} results={results} resultsCount={resultsCount} onFinished={onFinished} idleHint={idleHint ?? `no live run · showing stored results for stage ${pad2(stage)}`} />
+            <>
+              {pausedRunId && <PausedBanner projectId={projectId} stage={stage} runId={pausedRunId} />}
+              <RunMonitor runId={runId} results={results} resultsCount={resultsCount} onFinished={onFinished} idleHint={idleHint ?? `no live run · showing stored results for stage ${pad2(stage)}`} />
+            </>
           )}
         </div>
       </div>
