@@ -4,14 +4,18 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GENIE_", extra="ignore")
 
-    genie_home: Path = Field(default_factory=lambda: Path.home() / ".dataset-genie")
+    # Read from GENIE_HOME (documented name); GENIE_GENIE_HOME also accepted for prefix consistency.
+    genie_home: Path = Field(
+        default_factory=lambda: Path.home() / ".dataset-genie",
+        validation_alias=AliasChoices("GENIE_HOME", "GENIE_GENIE_HOME"),
+    )
     port: int = 8765
     default_budget_cap: float = 15.0
     default_stop_at_pct: int = 90
