@@ -5,7 +5,7 @@ from typer.testing import CliRunner
 
 
 def test_models_without_key_gives_friendly_error(genie_home, monkeypatch):
-    import genie.secrets as secrets
+    from genie import secrets
     from genie.cli import app
 
     monkeypatch.setattr(secrets, "get_secret", lambda name: None, raising=True)

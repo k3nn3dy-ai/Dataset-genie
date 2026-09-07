@@ -250,8 +250,14 @@ def test_models_table_with_fake_catalogue(monkeypatch):
                 Info("openai/gpt-4o-mini", "GPT-4o mini", 128000, 0.15, 0.6),
             ]
 
+    class FakeError(Exception):
+        pass
+
     providers = types.ModuleType("genie.providers.openrouter")
     providers.OpenRouterClient = FakeClient
+    providers.get_client = lambda **kw: FakeClient()
+    providers.OpenRouterError = FakeError
+    providers.MissingApiKey = type("MissingApiKey", (FakeError,), {})
     monkeypatch.setitem(sys.modules, "genie.providers.openrouter", providers)
     import genie.providers
 
@@ -261,3 +267,12 @@ def test_models_table_with_fake_catalogue(monkeypatch):
     assert r.exit_code == 0, r.output
     assert "claude-sonnet-4" in r.output and "3.00" in r.output and "15.00" in r.output
     assert "gpt-4o-mini" not in r.output and "1 model(s)" in r.output
+
+
+def test_models_without_key_is_friendly(genie_home, monkeypatch):
+    from genie import secrets
+
+    monkeypatch.setattr(secrets, "get_secret", lambda name: None)
+    r = runner.invoke(cli.app, ["models"])
+    assert r.exit_code == 1
+    assert "No OpenRouter API key" in r.output and "Traceback" not in r.output

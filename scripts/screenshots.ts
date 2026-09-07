@@ -56,25 +56,30 @@ async function resolveProject(): Promise<{ id: string; mock: boolean }> {
 }
 
 async function settle(page: Page) {
-  await page.waitForLoadState('networkidle').catch(() => {})
-  await page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready)
+  // screens poll /summary, so the network may never go idle: bound the wait
+  await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {})
+  await Promise.race([
+    page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready),
+    new Promise((r) => setTimeout(r, 5000)),
+  ])
   // wait until every web font we rely on is actually loaded (not just the API resolved)
   await page.waitForFunction(() => {
     const fs = (document as Document & { fonts: FontFaceSet }).fonts
-    const want = ['Chakra Petch', 'Rajdhani', 'Share Tech Mono']
-    return want.every((f) => fs.check(`16px "${f}"`))
+    // check the weights actually loaded from Google Fonts (700 / 500 / 400)
+    const want = ['bold 16px "Chakra Petch"', '500 16px "Rajdhani"', '16px "Share Tech Mono"']
+    return want.every((f) => fs.check(f))
   }, undefined, { timeout: 8000 }).catch(() => console.warn('  (web fonts did not report ready; continuing)'))
   await page.waitForTimeout(SETTLE_MS)
 }
 
 async function shoot(page: Page, path: string, file: string, mock: boolean) {
   const url = `${BASE_URL}${path}${mock ? (path.includes('?') ? '&' : '?') + 'mock=1' : ''}`
-  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
   await settle(page)
   const out = resolve(OUT_DIR, `${file}.png`)
   await page.screenshot({ path: out, fullPage: false })
   const title = await page.title()
-  const h1 = (await page.locator('h1').first().textContent().catch(() => null))?.trim() ?? '(no h1)'
+  const h1 = (await page.locator('h1').first().textContent({ timeout: 1500 }).catch(() => null))?.trim() ?? '(no h1)'
   console.log(`  ${file}.png  ←  ${path}   [${title} · ${h1}]`)
 }
 
