@@ -69,6 +69,14 @@ class ModelInfo(BaseModel):
     supports_json_schema: bool = False
     supports_tools: bool = False
     supports_json_object: bool = False
+    # OpenRouter's `supported_parameters` for the model. Empty means "unknown": send everything.
+    # Reasoning models (gpt-5.x, o-series) omit `temperature`; sending it anyway makes OpenRouter
+    # answer 404 "No endpoints found that can handle the requested parameters".
+    supported_parameters: list[str] = Field(default_factory=list)
+
+    def accepts(self, param: str) -> bool:
+        """True when the catalogue says the model takes `param`, or when we have no parameter list."""
+        return not self.supported_parameters or param in self.supported_parameters
 
     @classmethod
     def from_openrouter(cls, item: dict) -> ModelInfo:
@@ -90,6 +98,7 @@ class ModelInfo(BaseModel):
             supports_json_schema="structured_outputs" in params,
             supports_json_object="response_format" in params or "structured_outputs" in params,
             supports_tools="tools" in params or "tool_choice" in params,
+            supported_parameters=sorted(str(p) for p in params),
         )
 
 
@@ -286,13 +295,20 @@ class OpenRouterClient:
             body["provider"] = prov
         if self.prefer_prompt_caching and model_family(model) in CACHE_CONTROL_FAMILIES:
             messages = _with_cache_control(messages)
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "extra_body": body,
-        }
+        kwargs: dict[str, Any] = {"model": model, "messages": messages, "extra_body": body}
+        # Only send sampling / cap parameters the catalogue says this model accepts. With
+        # `require_parameters` (structured + tool calls) an unsupported one is a hard 404.
+        info = await self.model_info(model)
+        if info is None or info.accepts("temperature"):
+            kwargs["temperature"] = temperature
+        else:
+            log.debug("%s does not accept `temperature`; omitting it", model)
+        if info is None or info.accepts("max_tokens"):
+            kwargs["max_tokens"] = max_tokens
+        elif info.accepts("max_completion_tokens"):
+            body["max_completion_tokens"] = max_tokens
+        else:
+            log.debug("%s accepts neither max_tokens nor max_completion_tokens; sending no cap", model)
         if tools:
             kwargs["tools"] = tools
         if response_format:

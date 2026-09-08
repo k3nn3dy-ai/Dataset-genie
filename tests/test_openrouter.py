@@ -31,14 +31,32 @@ CATALOGUE = {
             "name": "OpenAI: GPT-4o",
             "context_length": 128000,
             "pricing": {"prompt": "0.0000025", "completion": "0.00001"},
-            "supported_parameters": ["tools", "response_format", "structured_outputs"],
+            "supported_parameters": ["max_tokens", "temperature", "tools", "response_format", "structured_outputs"],
+        },
+        {
+            # Reasoning model: no `temperature` (OpenRouter's real gpt-5.6 entries look like this).
+            "id": "openai/gpt-5.6-sol",
+            "name": "OpenAI: GPT-5.6 Sol",
+            "context_length": 1050000,
+            "pricing": {"prompt": "0.000002", "completion": "0.00001"},
+            "supported_parameters": ["include_reasoning", "max_completion_tokens", "max_tokens", "reasoning",
+                                     "reasoning_effort", "response_format", "seed", "structured_outputs",
+                                     "tool_choice", "tools"],
+        },
+        {
+            # Only the newer token cap name.
+            "id": "openai/o-next",
+            "name": "OpenAI: o-next",
+            "context_length": 200000,
+            "pricing": {"prompt": "0.000002", "completion": "0.00001"},
+            "supported_parameters": ["max_completion_tokens", "response_format", "structured_outputs"],
         },
         {
             "id": "meta-llama/llama-3.1-8b-instruct",
             "name": "Meta: Llama 3.1 8B",
             "context_length": 131072,
             "pricing": {"prompt": "0.00000005", "completion": "0.00000008"},
-            "supported_parameters": ["response_format"],
+            "supported_parameters": ["max_tokens", "temperature", "response_format"],
         },
         {
             "id": "some/plain-model",
@@ -143,8 +161,10 @@ async def test_chat_cost_from_usage_and_headers(srv):
     assert sent["usage"] == {"include": True}
     assert sent["temperature"] == 0.2 and sent["max_tokens"] == 99
     assert sent["model"] == "openai/gpt-4o"
-    # No catalogue fetch needed when usage.cost is present
-    assert srv.calls("/api/v1/models") == []
+    # the catalogue is consulted once for the model's supported parameters, then served from memory
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("again"))
+    await c.chat("openai/gpt-4o", MSGS)
+    assert len(srv.calls("/api/v1/models")) == 1
 
 
 async def test_chat_fallback_pricing_from_catalogue(srv):
@@ -170,6 +190,63 @@ async def test_chat_tool_calls_and_provider_routing(srv):
     assert sent["provider"]["order"] == ["OpenAI"]
     assert sent["provider"]["allow_fallbacks"] is False
     assert sent["tools"] == tools
+
+
+# ----------------------------------------------------------------------- unsupported params
+# OpenRouter answers 404 "No endpoints found that can handle the requested parameters" when a
+# request carries a parameter no endpoint for that model supports (gpt-5.6: `temperature`), and
+# `require_parameters` (set for structured/tool calls) makes that strict. The client must only
+# send what the catalogue says the model accepts.
+async def test_chat_omits_temperature_for_models_that_do_not_support_it(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok", model="openai/gpt-5.6-sol"))
+    c = srv.client()
+    await c.chat("openai/gpt-5.6-sol", MSGS, temperature=0.4, max_tokens=512)
+    sent = srv.calls("/api/v1/chat/completions")[0]
+    assert "temperature" not in sent
+    assert sent["max_tokens"] == 512
+
+
+async def test_chat_keeps_temperature_when_supported_or_model_unknown(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok"))
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok"))
+    c = srv.client()
+    await c.chat("openai/gpt-4o", MSGS, temperature=0.4)
+    await c.chat("unknown/not-in-catalogue", MSGS, temperature=0.4)
+    a, b = srv.calls("/api/v1/chat/completions")
+    assert a["temperature"] == 0.4
+    assert b["temperature"] == 0.4  # no catalogue entry: send everything, let the provider decide
+
+
+async def test_chat_uses_max_completion_tokens_when_max_tokens_unsupported(srv):
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("ok", model="openai/o-next"))
+    c = srv.client()
+    await c.chat("openai/o-next", MSGS, max_tokens=777)
+    sent = srv.calls("/api/v1/chat/completions")[0]
+    assert "max_tokens" not in sent
+    assert sent["max_completion_tokens"] == 777
+
+
+async def test_structured_on_reasoning_model_sends_no_temperature_even_for_repair(srv):
+    # first reply invalid → repair call (which pins temperature 0) → must also omit temperature
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion("not json", model="openai/gpt-5.6-sol"))
+    srv.enqueue("POST", "/api/v1/chat/completions", 200,
+                completion(json.dumps({"title": "T", "score": 3}), model="openai/gpt-5.6-sol"))
+    c = srv.client()
+    obj, _ = await c.chat_structured("openai/gpt-5.6-sol", MSGS, Answer, temperature=0.0)
+    assert obj.score == 3
+    calls = srv.calls("/api/v1/chat/completions")
+    assert len(calls) == 2
+    for sent in calls:
+        assert "temperature" not in sent
+        assert sent["provider"]["require_parameters"] is True
+        assert sent["response_format"]["type"] == "json_schema"
+
+
+async def test_model_info_exposes_supported_parameters(srv):
+    c = srv.client()
+    info = await c.model_info("openai/gpt-5.6-sol")
+    assert "temperature" not in info.supported_parameters
+    assert "structured_outputs" in info.supported_parameters
 
 
 async def test_retry_on_429_then_success(srv):

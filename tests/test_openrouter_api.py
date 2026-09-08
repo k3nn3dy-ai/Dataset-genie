@@ -43,13 +43,15 @@ def test_no_key_uses_db_cache(client, genie_home):
     assert [m["id"] for m in r.json()] == ["meta-llama/llama-3.1-8b-instruct"]
     assert "x-genie-warning" in r.headers
     r = client.get("/api/models/?q=OPENAI")
-    assert {m["id"] for m in r.json()} == {"openai/gpt-4o", "openai/text-embedding-3-small"}
+    assert {m["id"] for m in r.json()} == {
+        "openai/gpt-4o", "openai/gpt-5.6-sol", "openai/o-next", "openai/text-embedding-3-small",
+    }
 
 
 def test_with_key_fetches_and_searches(client, srv, fake_secrets):
     fake_secrets["openrouter"] = "sk-or-x"
     r = client.get("/api/models/")
-    assert r.status_code == 200 and len(r.json()) == 4
+    assert r.status_code == 200 and len(r.json()) == len(CATALOGUE["data"])
     assert "x-genie-warning" not in r.headers
     m = next(x for x in r.json() if x["id"] == "openai/gpt-4o")
     assert m["prompt_price_per_m"] == pytest.approx(2.5) and m["supports_json_schema"] is True
@@ -63,7 +65,7 @@ def test_refresh(client, srv, fake_secrets):
     fake_secrets["openrouter"] = "sk-or-x"
     client.get("/api/models/")
     r = client.get("/api/models/refresh")
-    assert r.status_code == 200 and r.json()["count"] == 4
+    assert r.status_code == 200 and r.json()["count"] == len(CATALOGUE["data"])
     assert len(srv.calls("/api/v1/models")) == 2
 
 
