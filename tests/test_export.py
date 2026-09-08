@@ -354,3 +354,25 @@ def test_unknown_project_and_format(genie_home):
         ex.build_bundle("nope", ex.ExportRequest(formats=["sft"]), s)
     with pytest.raises(ValidationError):
         ex.ExportRequest(formats=["parquet"])  # type: ignore[list-item]
+
+
+# ------------------------------------------------------------------ flipped pairs (live run)
+def test_dpo_export_excludes_pairs_where_judge_preferred_rejected(genie_home):
+    """Brief §4.5: confirm chosen > rejected. A pair the judge flipped would teach the wrong
+    preference if exported as-is, so it is dropped and reported."""
+    from genie.models import PairRecord
+
+    with session_scope() as s:
+        pid = seed_project(s, with_pairs=True, rows_per_leaf=3).id
+        pairs = s.query(PairRecord).filter_by(project_id=pid).order_by(PairRecord.id).all()
+        n = len(pairs)
+        flipped = pairs[0]
+        flipped.judge = {**flipped.judge, "verdict": "rejected"}
+        s.flush()
+        stats: dict[str, int] = {}
+        kept = ex.select_pairs(pid, s, ex.ExportRequest(formats=["dpo"]), stats=stats)
+        assert len(kept) == n - 1 and stats.get("flipped") == 1
+        assert all(p.metadata.id != flipped.row_id for p in kept)
+        res = ex.build_bundle(pid, ex.ExportRequest(formats=["dpo"], eval_split=0.0), s)
+    assert res.counts["dpo"]["train"] == n - 1
+    assert any("flipped" in w for w in res.warnings)

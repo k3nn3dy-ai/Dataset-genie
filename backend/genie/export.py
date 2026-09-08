@@ -205,6 +205,8 @@ def select_pairs(
     """Pairs (`draft`, `judged`, `accepted`; `dropped` never) whose chosen row is exportable.
 
     Ties — status `tie` or a judge verdict of `tie` — are excluded when `drop_ties` is on.
+    Flipped pairs — the judge preferred the *rejected* side — are always excluded and counted in
+    `stats["flipped"]`: exporting them as-is would teach the wrong preference (brief §4.5).
     """
     statuses = ["draft", "judged", "accepted"] + ([] if drop_ties else ["tie"])
     stmt = (
@@ -217,11 +219,15 @@ def select_pairs(
 
     pairs: list[Pair] = []
     gated_out = 0
+    flipped = 0
     for pair_rec, row_rec in recs:
         if row_rec.status in EXCLUDED_ROW_STATUSES:
             continue
         judge = pair_rec.judge if isinstance(pair_rec.judge, dict) else {}
         if drop_ties and judge.get("verdict") == "tie":
+            continue
+        if judge.get("verdict") == "rejected":
+            flipped += 1
             continue
         score = judge.get("score")
         if score is None:
@@ -232,6 +238,7 @@ def select_pairs(
         pairs.append(pair_from_record(pair_rec, row_rec))
     if stats is not None:
         stats["gated_out"] = stats.get("gated_out", 0) + gated_out
+        stats["flipped"] = stats.get("flipped", 0) + flipped
     return pairs
 
 
@@ -574,6 +581,11 @@ def build_bundle(
         raise ValueError(
             "nothing to export: no rows or pairs are exportable for the requested formats "
             f"({', '.join(dict.fromkeys(req.formats))}); run the pipeline stages first"
+        )
+    if stats.get("flipped"):
+        warnings.append(
+            f"dpo: {stats['flipped']} flipped pair(s) excluded (the judge preferred the rejected answer; "
+            "exporting them would teach the wrong preference)"
         )
     if stats.get("low_score") and not req.gate_on_score:
         warnings.append(
