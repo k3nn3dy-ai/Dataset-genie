@@ -54,6 +54,17 @@ make build            # vite build → frontend/dist
 uv run genie serve    # http://localhost:8765
 ```
 
+### Start and stop
+
+```
+make start        # build the UI if needed, run the app in the background, open http://localhost:8765
+make stop         # stop it (also stops anything `make dev` left on :8765 / :5173)
+make status       # is it running?
+scripts/start.sh --dev   # backend with hot reload on :8765 + Vite on :5173
+```
+
+Logs go to `~/.dataset-genie/genie.log`; the process id is in `~/.dataset-genie/genie.pid`.
+
 ## The pipeline, stage by stage
 
 Each stage has its own model slot, temperature and max-tokens; each stores its raw calls; each can

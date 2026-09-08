@@ -1,4 +1,4 @@
-.PHONY: dev backend frontend build test test-py test-fe lint screenshots seed-demo install
+.PHONY: dev backend frontend build test test-py test-fe lint screenshots seed-demo install start stop status
 
 PY := uv run --no-sync
 
@@ -44,3 +44,12 @@ seed-demo: ## demo project "Linux Incident Triage" with realistic fake data (ide
 screenshots: ## Playwright captures of all 11 screens into docs/screenshots (needs `make dev` running; falls back to ?mock=1)
 	cd frontend && npx playwright install chromium >/dev/null 2>&1 || true
 	cd frontend && npx -y tsx ../scripts/screenshots.ts
+
+start: ## run the built app in the background on :8765 (scripts/start.sh --dev for hot reload)
+	@scripts/start.sh
+
+stop: ## stop whatever scripts/start.sh or make dev left running
+	@scripts/stop.sh
+
+status:
+	@curl -sf http://localhost:8765/api/health && echo "  running on :8765" || echo "not running"
