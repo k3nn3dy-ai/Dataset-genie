@@ -114,7 +114,7 @@ class _ResponseBodyError(Exception):
         self.message = str(error.get("message") or error)
         meta = error.get("metadata") or {}
         prov = meta.get("provider_name") if isinstance(meta, dict) else None
-        super().__init__(f"{self.message}{f' (provider {prov})' if prov else ''}")
+        super().__init__(_describe_error(error))
 
 
 class MissingApiKey(OpenRouterError):
@@ -370,22 +370,36 @@ class OpenRouterClient:
     ) -> tuple[BaseModel, CallResult]:
         info = await self.model_info(model)
         json_schema = schema.model_json_schema()
-        msgs = list(messages)
-        response_format: dict | None
-        if info is not None and info.supports_json_schema:
-            response_format = {
+        # Modes in order of preference; each is tried once and downgraded on a provider 400.
+        # `strict` is off on purpose: OpenAI's strict mode rejects ordinary pydantic schemas
+        # (optional fields, free-form dicts) with "'additionalProperties' is required to be false".
+        modes: list[tuple[str, dict | None, list[dict]]] = []
+        if info is None or info.supports_json_schema:
+            modes.append(("json_schema", {
                 "type": "json_schema",
-                "json_schema": {"name": schema.__name__, "strict": True, "schema": json_schema},
-            }
-        elif info is not None and info.supports_json_object:
-            response_format = {"type": "json_object"}
-            msgs = _with_json_instruction(msgs, json_schema)
-        else:
-            response_format = None
-            msgs = _with_json_instruction(msgs, json_schema)
+                "json_schema": {"name": schema.__name__, "strict": False, "schema": json_schema},
+            }, list(messages)))
+        if info is None or info.supports_json_object:
+            modes.append(("json_object", {"type": "json_object"}, _with_json_instruction(messages, json_schema)))
+        modes.append(("plain", None, _with_json_instruction(messages, json_schema)))
 
         attempts: list[CallResult] = []
-        first = await self.chat(model, msgs, response_format=response_format, **kw)
+        first: CallResult | None = None
+        mode = "plain"
+        response_format: dict | None = None
+        msgs = list(messages)
+        for i, (mode, response_format, msgs) in enumerate(modes):
+            try:
+                first = await self.chat(model, msgs, response_format=response_format, **kw)
+                break
+            except OpenRouterError as exc:
+                if exc.status == 400 and i < len(modes) - 1:
+                    log.warning("structured output: %s rejected %s mode (%s); downgrading to %s",
+                                model, mode, str(exc)[:200], modes[i + 1][0])
+                    continue
+                raise
+        assert first is not None
+        first = first.model_copy(update={"raw": {**first.raw, "structured_mode": mode}})
         attempts.append(first)
         parsed, err = _try_parse(schema, first.content)
         if parsed is not None:
@@ -417,7 +431,7 @@ class OpenRouterClient:
             merged = second.model_copy(update={
                 "cost_usd": total,
                 "latency_ms": sum(a.latency_ms for a in attempts),
-                "raw": {**second.raw, "attempts": len(attempts), "repaired": True},
+                "raw": {**second.raw, "attempts": len(attempts), "repaired": True, "structured_mode": mode},
             })
             return parsed, merged
         raise StructuredOutputError(
@@ -565,14 +579,38 @@ class OpenRouterClient:
 
 # ------------------------------------------------------------------------------- helpers
 def _error_message(exc: openai.APIStatusError) -> str:
+    """OpenRouter wraps provider failures as 'Provider returned error' with the real message in
+    `error.metadata.raw`; surface that (and the provider name) so failures are diagnosable."""
     body = exc.body
     if isinstance(body, dict):
         err = body.get("error")
-        if isinstance(err, dict) and err.get("message"):
-            return str(err["message"])
+        if isinstance(err, dict):
+            return _describe_error(err)
         if body.get("message"):
-            return str(body["message"])
+            return _describe_error(body)
     return str(exc)
+
+
+def _describe_error(err: dict) -> str:
+    msg = str(err.get("message") or err)
+    meta = err.get("metadata") or {}
+    if isinstance(meta, dict):
+        prov = meta.get("provider_name")
+        raw = meta.get("raw")
+        detail = None
+        if isinstance(raw, str) and raw.strip():
+            try:
+                parsed = json.loads(raw)
+                inner = parsed.get("error") if isinstance(parsed, dict) else None
+                detail = (inner.get("message") if isinstance(inner, dict) else None) or raw.strip()
+            except ValueError:
+                detail = raw.strip()
+        elif isinstance(raw, dict):
+            inner = raw.get("error")
+            detail = (inner.get("message") if isinstance(inner, dict) else None) or json.dumps(raw)
+        if prov or detail:
+            msg = f"{msg} ({prov or 'provider'}): {detail}" if detail else f"{msg} ({prov})"
+    return msg[:800]
 
 
 def _int_or_none(value: Any) -> int | None:

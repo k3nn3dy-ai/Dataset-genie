@@ -217,6 +217,9 @@ def run(
             except ExportValidationError as exc:
                 _print_validation_error(exc)
                 raise typer.Exit(code=1) from exc
+            except ValueError as exc:  # nothing to export yet: warn, don't fail the whole run
+                err_console.print(f"[yellow]stage 8 export skipped[/]: {exc}")
+                continue
             _print_bundle(res, slug)
             continue
         try:

@@ -146,3 +146,20 @@ def test_hf_status_endpoint_never_leaks_token(client, project_id, monkeypatch):
 
     monkeypatch.setattr(ex, "get_hf_token", lambda: None)
     assert client.get(f"/api/projects/{project_id}/hf/status").json() == {"has_token": False, "username": None}
+
+
+def test_post_export_400_when_nothing_to_export(client, genie_home):
+    """A project with no exportable rows must not produce an empty bundle (seen in the live run)."""
+    from genie.models import Project
+
+    with session_scope() as s:
+        proj = Project(slug="empty", name="Empty", domain_brief="x", data_types=["sft"],
+                       config=ProjectConfig().model_dump())
+        s.add(proj)
+        s.flush()
+        pid, slug = proj.id, proj.slug
+    r = client.post(f"/api/projects/{pid}/export", json={"formats": ["sft", "dpo"]})
+    assert r.status_code == 400, r.text
+    assert "nothing to export" in r.json()["detail"].lower()
+    assert not (genie_home / "exports" / slug).exists()
+    assert client.get(f"/api/projects/{pid}/exports").json() == []

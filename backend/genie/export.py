@@ -570,6 +570,11 @@ def build_bundle(
         report = validate_rows(items, req.validate_template, kind=kind)  # raises loudly
         warnings.extend(f"{fmt}: {w}" for w in report.warnings)
         items_by_format[fmt] = items
+    if not any(items_by_format.values()):
+        raise ValueError(
+            "nothing to export: no rows or pairs are exportable for the requested formats "
+            f"({', '.join(dict.fromkeys(req.formats))}); run the pipeline stages first"
+        )
     if stats.get("low_score") and not req.gate_on_score:
         warnings.append(
             f"{stats['low_score']} row(s) scored below {req.gate_threshold}; kept and flagged "

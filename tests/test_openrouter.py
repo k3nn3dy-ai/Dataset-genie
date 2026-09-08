@@ -527,3 +527,45 @@ async def test_free_model_zero_catalogue_price_records_zero_not_error(srv):
     c = srv.client()
     res = await c.chat("acme/tiny:free", MSGS)
     assert res.content == "hi" and res.cost_usd == 0.0 and res.cost_estimated is False
+
+
+# ----------------------------------------------------------------------------- live-run fixes
+async def test_structured_downgrades_on_provider_400_for_json_schema(srv):
+    """Live OpenAI rejected our schema in json_schema mode (HTTP 400 'Provider returned error');
+    the client must fall back to json_object mode, then plain instruction, before giving up."""
+    err = {"error": {"message": "Provider returned error", "code": 400, "metadata": {
+        "raw": json.dumps({"error": {"message": "Invalid schema for response_format 'Answer': "
+                                                  "'additionalProperties' is required to be supplied and to be false."}}),
+        "provider_name": "OpenAI"}}}
+    srv.enqueue("POST", "/api/v1/chat/completions", 400, err)
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion('{"title": "t", "score": 7}', cost=0.002))
+    c = srv.client()
+    parsed, res = await c.chat_structured("openai/gpt-4o", MSGS, Answer)
+    assert parsed.score == 7
+    assert res.raw.get("structured_mode") == "json_object"
+    sent = [b for m, pth, b in srv.requests if pth.endswith("/chat/completions")]
+    assert sent[0]["response_format"]["type"] == "json_schema"
+    assert sent[0]["response_format"]["json_schema"]["strict"] is False
+    assert sent[1]["response_format"] == {"type": "json_object"}
+
+
+async def test_structured_downgrades_all_the_way_to_plain(srv):
+    err = {"error": {"message": "Provider returned error", "code": 400, "metadata": {"raw": "bad response_format", "provider_name": "X"}}}
+    srv.enqueue("POST", "/api/v1/chat/completions", 400, err)
+    srv.enqueue("POST", "/api/v1/chat/completions", 400, err)
+    srv.enqueue("POST", "/api/v1/chat/completions", 200, completion('{"title": "t", "score": 3}', cost=0.002))
+    c = srv.client()
+    parsed, res = await c.chat_structured("openai/gpt-4o", MSGS, Answer)
+    assert parsed.score == 3 and res.raw.get("structured_mode") == "plain"
+    sent = [b for m, pth, b in srv.requests if pth.endswith("/chat/completions")]
+    assert "response_format" not in sent[2]
+
+
+async def test_error_message_includes_provider_raw_detail(srv):
+    err = {"error": {"message": "Provider returned error", "code": 400, "metadata": {
+        "raw": json.dumps({"error": {"message": "Invalid schema for response_format"}}), "provider_name": "OpenAI"}}}
+    srv.enqueue("POST", "/api/v1/chat/completions", 400, err)
+    c = srv.client()
+    with pytest.raises(OpenRouterError) as ei:
+        await c.chat("openai/gpt-4o", MSGS)
+    assert "OpenAI" in str(ei.value) and "Invalid schema" in str(ei.value)
