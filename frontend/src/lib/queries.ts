@@ -71,6 +71,14 @@ export function usePatchConfig(id: string | undefined) {
   const inv = useInvalidateProject()
   return useMutation({ mutationFn: (config: Partial<ProjectConfig>) => data.patchProject(id!, { config }), onSuccess: () => inv(id!) })
 }
+/** Patch top-level project fields (budget cap, auto-stop %) — these live on the project row, not in config. */
+export function usePatchProject(id: string | undefined) {
+  const inv = useInvalidateProject()
+  return useMutation({
+    mutationFn: (patch: { budget_cap_usd?: number; stop_at_pct?: number; name?: string; domain_brief?: string }) => data.patchProject(id!, patch),
+    onSuccess: () => inv(id!),
+  })
+}
 export function usePutTaxonomy(id: string | undefined) {
   const inv = useInvalidateProject()
   return useMutation({ mutationFn: (tree: TopicNode[]) => data.putTaxonomy(id!, tree), onSuccess: () => inv(id!) })

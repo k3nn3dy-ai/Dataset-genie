@@ -14,6 +14,8 @@ SQLite database so nothing is a black box.
 
 <p align="center"><img src="docs/screenshots/01-projects.png" width="960" alt="Projects screen"></p>
 
+**New here? Read the [User Guide](docs/USER_GUIDE.md)** — a plain-language walk from empty app to exported dataset.
+
 ## Screenshots
 
 | | | |

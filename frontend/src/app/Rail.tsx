@@ -1,11 +1,16 @@
 import clsx from 'clsx'
+import { useEffect, useState } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import { KANA, STAGES } from '../lib/types'
-import { useSummary } from '../lib/queries'
+import { usePatchProject, useSummary } from '../lib/queries'
 import { useStore } from './store'
 import { Icon } from '../components/Icon'
+import { Button } from '../components/Button'
+import { Field, NumberInput } from '../components/Fields'
+import { Modal } from '../components/Modal'
+import { Slider } from '../components/Slider'
 import { BudgetBar } from './BudgetBar'
-import { pad2 } from '../lib/format'
+import { pad2, usd } from '../lib/format'
 import type { StageState } from '../lib/viewtypes'
 
 export function Rail() {
@@ -65,14 +70,61 @@ export function Rail() {
         </ol>
 
         <div className="mt-auto pt-3 border-t border-line mx-0">
+          <RailExternal href={GUIDE_URL} icon="external" label="Guide" kana="案内" />
           <RailLink to="/settings" icon="settings" label="Settings" kana={KANA.settings} />
         </div>
       </nav>
 
       <div className="px-4 py-3 border-t border-line">
-        <BudgetBar spend={summary.data?.spend_usd ?? project?.spend_usd ?? 0} cap={summary.data?.cap_usd ?? project?.budget_cap_usd ?? 15} stopAt={project?.stop_at_pct ?? 90} />
+        {project ? (
+          <BudgetEditor projectId={project.id} spend={summary.data?.spend_usd ?? project.spend_usd ?? 0}
+            cap={summary.data?.cap_usd ?? project.budget_cap_usd ?? 15} stopAt={project.stop_at_pct ?? 90} />
+        ) : (
+          <BudgetBar spend={0} cap={15} stopAt={90} />
+        )}
       </div>
     </aside>
+  )
+}
+
+/** The rail's budget bar doubles as the per-project cap editor: click it to change cap / auto-stop. */
+function BudgetEditor({ projectId, spend, cap, stopAt }: { projectId: string; spend: number; cap: number; stopAt: number }) {
+  const [open, setOpen] = useState(false)
+  const [draftCap, setDraftCap] = useState(cap)
+  const [draftStop, setDraftStop] = useState(stopAt)
+  const patch = usePatchProject(projectId)
+  useEffect(() => { if (!open) { setDraftCap(cap); setDraftStop(stopAt) } }, [cap, stopAt, open])
+  const save = () => patch.mutate({ budget_cap_usd: Math.max(1, draftCap), stop_at_pct: Math.min(100, Math.max(1, Math.round(draftStop))) }, { onSuccess: () => setOpen(false) })
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} data-testid="budget-edit" title="Click to change this project's budget cap and auto-stop"
+        className="w-full text-left rounded-[6px] -mx-1 px-1 py-1 hover:bg-surface2/60 transition-colors">
+        <BudgetBar spend={spend} cap={cap} stopAt={stopAt} />
+        <div className="label !text-[9px] mt-1 text-dim">click to edit cap</div>
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Project budget" kana="予算" width="sm"
+        footer={(<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button variant="primary" icon="check" loading={patch.isPending} onClick={save}>Save</Button></>)}>
+        <div className="flex flex-col gap-4 text-[14px]">
+          <p className="text-muted leading-relaxed">Spent so far: <span className="font-mono text-text">{usd(spend)}</span>. The cap is enforced on the server before every model call; a run stops automatically at the auto-stop percentage.</p>
+          <Field label="cap for this project" hint="USD"><NumberInput value={draftCap} min={1} max={1000} step={1} unit="USD" onChange={setDraftCap} /></Field>
+          <Slider label="auto-stop at" value={draftStop} min={10} max={100} step={5} tone="amber" format={(v) => `${v}% of cap`} onChange={setDraftStop} />
+          {patch.error && <div className="text-red text-[13px]">{String((patch.error as Error).message)}</div>}
+        </div>
+      </Modal>
+    </>
+  )
+}
+
+const GUIDE_URL = 'https://github.com/k3nn3dy-ai/Dataset-genie/blob/main/docs/USER_GUIDE.md'
+
+function RailExternal({ href, icon, label, kana }: { href: string; icon: 'external'; label: string; kana: string }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" title="Open the user guide in a new tab"
+      className="relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors text-muted hover:text-text hover:bg-surface2/60">
+      <span className="w-6 h-6 rounded-[6px] border border-line2 flex items-center justify-center"><Icon name={icon} size={13} /></span>
+      <span className="font-ui font-semibold text-[14px] flex-1">{label}</span>
+      <span className="font-mono text-[10px] text-dim">{kana}</span>
+    </a>
   )
 }
 
