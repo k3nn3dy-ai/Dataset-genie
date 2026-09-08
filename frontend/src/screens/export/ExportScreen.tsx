@@ -88,6 +88,6 @@ export function ExportScreen() {
 
   return (
     <StageScreen stage={8} params={{}} noRun config={config} results={results} resultsCount={exports.data?.length} blocked={blocked} loading={loading} error={projectError ?? exports.error} onRetry={() => { void refetch(); void exports.refetch() }}
-      idleHint="export writes JSONL + dataset_card.md + generation_config.yaml + manifest.json" subtitle="One JSON object per line, UTF-8, validated before a single byte is written. Reproducible from generation_config.yaml." />
+      idleHint="export writes JSONL + README.md + generation_config.yaml + manifest.json" subtitle="One JSON object per line, UTF-8, validated before a single byte is written. Reproducible from generation_config.yaml." />
   )
 }

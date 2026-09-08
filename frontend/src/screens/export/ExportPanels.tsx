@@ -39,7 +39,7 @@ export function BundleTree({ slug, formats }: { slug: string; formats: ExportFor
       {formats.map((f, i) => (
         <span key={f}>{'  '}<span className="text-orange">{f}</span>/{'\n'}{'    '}train.jsonl{'\n'}{'    '}eval.jsonl{i < formats.length - 1 ? '\n' : '\n'}</span>
       ))}
-      {'  '}<span className="text-steel">dataset_card.md</span>{'\n'}
+      {'  '}<span className="text-steel">README.md</span>{'\n'}
       {'  '}<span className="text-steel">generation_config.yaml</span>{'\n'}
       {'  '}<span className="text-steel">manifest.json</span>
     </pre>

@@ -3,7 +3,7 @@
 Bundle layout (spec §8):
     exports/<project-slug>/<YYYYMMDD-HHMMSS>/
         <format>/train.jsonl, <format>/eval.jsonl   one dir per requested format
-        dataset_card.md                             HF-style card with YAML front-matter
+        README.md                                   HF dataset card (YAML front-matter); the Hub renders only this name
         generation_config.yaml                      re-runnable: `genie run generation_config.yaml`
         manifest.json                               files + sha256 + counts + warnings
 
@@ -411,7 +411,7 @@ def render_dataset_card(
         created_at=created_at or _now_iso(),
         version=__version__,
     )
-    assert_no_secrets(text, what="dataset_card.md")
+    assert_no_secrets(text, what="README.md")
     return text
 
 
@@ -673,8 +673,8 @@ def _write_bundle(
         gemma_folded=gemma_folded,
         created_at=created_at,
     )
-    (root / "dataset_card.md").write_text(card, encoding="utf-8")
-    files.append(root / "dataset_card.md")
+    (root / "README.md").write_text(card, encoding="utf-8")
+    files.append(root / "README.md")
     (root / "generation_config.yaml").write_text(render_generation_config(project, req), encoding="utf-8")
     files.append(root / "generation_config.yaml")
 

@@ -392,7 +392,7 @@ def main() -> None:
         counts = {"sft": {"train": len(exportable) - n_eval, "eval": n_eval, "total": len(exportable)},
                   "dpo": {"train": len(pairs), "eval": 0, "total": len(pairs)}}
         (bundle / "manifest.json").write_text(json.dumps({"project": SLUG, "created_at": t0 + 7 * 900, "formats": ["sft", "dpo"], "counts": counts}, indent=2))
-        (bundle / "dataset_card.md").write_text(
+        (bundle / "README.md").write_text(
             f"# {NAME}\n\nSynthetic SFT + DPO dataset generated with Dataset Genie.\n\n"
             f"- Teacher: `{TEACHER}`, `{TEACHER2}`\n- Prompts: `{PROMPTER}`\n- Judge: `{JUDGE}`\n\n"
             f"## Rubric\n\n" + "\n".join(f"- {n} ({w})" for n, w in zip(RUBRIC, WEIGHTS)) + "\n\n"

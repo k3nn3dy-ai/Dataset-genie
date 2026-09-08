@@ -158,7 +158,7 @@ exports/<slug>/<YYYYMMDD-HHMMSS>/
   sft/train.jsonl  sft/eval.jsonl
   dpo/train.jsonl  dpo/eval.jsonl
   alpaca/…  tools/…  grpo/…
-  dataset_card.md          # models per stage, rubric, counts, filters, licence — no secrets
+  README.md                # dataset card: models per stage, rubric, counts, filters, licence — no secrets
   generation_config.yaml   # everything needed to reproduce (see below)
   manifest.json
 ```
@@ -277,7 +277,7 @@ backend/genie/
   jobs/        runner.py (asyncio pool, BudgetGuard, resume)  events.py (SSE bus, 500-event replay)
   pipeline/    taxonomy prompts responses preferences judge filters  + prompts_lib/*.md
   formats/     sft alpaca dpo tools grpo  validate.py (structural + chat-template checks)
-  export.py    bundle, dataset_card.md, generation_config.yaml, HF push
+  export.py    bundle, README.md (dataset card), generation_config.yaml, HF push
   api/         one router per resource under /api
 frontend/      Vite + React + TypeScript + Tailwind (lofi-cyberpunk shell, 10 screens)
 tests/         pytest: golden JSONL fixtures, FakeOpenRouter, integration + adversarial runner tests

@@ -164,7 +164,7 @@ against chat template" on, and press **Export bundle**. The bundle lands in
 
 ```
 sft/train.jsonl        sft/eval.jsonl
-dataset_card.md        what models, rubric, filters and counts produced this
+README.md        what models, rubric, filters and counts produced this
 generation_config.yaml everything needed to regenerate it
 manifest.json          file list with checksums
 ```

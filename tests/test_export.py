@@ -95,7 +95,7 @@ def test_bundle_layout_counts_and_manifest(project_id, genie_home):
     for fmt in ("sft", "alpaca", "dpo"):
         assert (root / fmt / "train.jsonl").exists() and (root / fmt / "eval.jsonl").exists()
         assert res.counts[fmt] == {"train": 38, "eval": 2}  # 40 rows, 5 % → 2
-    assert set(res.files) >= {"dataset_card.md", "generation_config.yaml", "manifest.json", "sft/train.jsonl"}
+    assert set(res.files) >= {"README.md", "generation_config.yaml", "manifest.json", "sft/train.jsonl"}
 
     manifest = json.loads((root / "manifest.json").read_text())
     assert manifest["counts"] == res.counts
@@ -139,10 +139,10 @@ def test_card_and_yaml_contain_no_secrets(project_id, monkeypatch):
     with session_scope() as s:
         res = ex.build_bundle(project_id, ex.ExportRequest(formats=["sft", "dpo"]), s)
     root = Path(res.path)
-    for name in ("dataset_card.md", "generation_config.yaml", "manifest.json"):
+    for name in ("README.md", "generation_config.yaml", "manifest.json"):
         text = (root / name).read_text(encoding="utf-8")
         assert "sk-or-" not in text and "hf_" not in text, name
-    card = (root / "dataset_card.md").read_text(encoding="utf-8")
+    card = (root / "README.md").read_text(encoding="utf-8")
     assert card.startswith("---\n")
     front = yaml.safe_load(card.split("---\n")[1])
     assert front["license"] == "cc-by-4.0"
@@ -321,7 +321,7 @@ def test_gemma_export_folds_system_turn_into_first_user(project_id, genie_home):
     assert not any(r["instruction"].startswith("System: ") for r in alp)
     assert all(r["instruction"].startswith("You are a precise") for r in alp)
     assert any("gemma" in w.lower() and "system" in w.lower() for w in res.warnings)
-    card = (root / "dataset_card.md").read_text(encoding="utf-8")
+    card = (root / "README.md").read_text(encoding="utf-8")
     assert "Gemma" in card and "folded" in card
 
 

@@ -354,10 +354,10 @@ def test_full_pipeline_sft_dpo(client, fake, small_project, tmp_path, monkeypatc
     n_eval = len(sft_eval.read_text().splitlines()) if sft_eval.exists() else 0
     assert 0 <= n_eval <= max(1, round(len(exportable_rows) * 0.05) + 1), n_eval
     # card + manifest + config
-    card = (bundle / "dataset_card.md").read_text("utf-8")
+    card = (bundle / "README.md").read_text("utf-8")
     for slot in ("responses", "judge", "prompts"):
         slug = proj["config"][slot]["model"]["slug"] if slot != "responses" else proj["config"]["responses"]["ensemble"][0]["slug"]
-        assert slug in card, f"{slot} model {slug} missing from dataset_card.md"
+        assert slug in card, f"{slot} model {slug} missing from README.md"
     for crit in proj["config"]["judge"]["rubric"]:
         assert crit["name"] in card
     assert not SECRET_LIKE.search(card), "dataset card leaks a secret-like string"
