@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, useParams } from 'react-router-dom'
 import { KANA, STAGES } from '../lib/types'
 import { usePatchProject, useSummary } from '../lib/queries'
@@ -102,7 +103,8 @@ function BudgetEditor({ projectId, spend, cap, stopAt }: { projectId: string; sp
         <BudgetBar spend={spend} cap={cap} stopAt={stopAt} />
         <div className="label !text-[9px] mt-1 text-dim">click to edit cap</div>
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Project budget" kana="予算" width="sm"
+      {/* portal: the rail's backdrop-filter would otherwise trap this fixed-position modal inside the rail */}
+      {createPortal(<Modal open={open} onClose={() => setOpen(false)} title="Project budget" kana="予算" width="sm"
         footer={(<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button variant="primary" icon="check" loading={patch.isPending} onClick={save}>Save</Button></>)}>
         <div className="flex flex-col gap-4 text-[14px]">
           <p className="text-muted leading-relaxed">Spent so far: <span className="font-mono text-text">{usd(spend)}</span>. The cap is enforced on the server before every model call; a run stops automatically at the auto-stop percentage.</p>
@@ -110,7 +112,7 @@ function BudgetEditor({ projectId, spend, cap, stopAt }: { projectId: string; sp
           <Slider label="auto-stop at" value={draftStop} min={10} max={100} step={5} tone="amber" format={(v) => `${v}% of cap`} onChange={setDraftStop} />
           {patch.error && <div className="text-red text-[13px]">{String((patch.error as Error).message)}</div>}
         </div>
-      </Modal>
+      </Modal>, document.body)}
     </>
   )
 }
