@@ -6,10 +6,13 @@ const BASE = '/api'
 export class ApiError extends Error {
   status: number
   detail: unknown
-  constructor(status: number, detail: unknown) {
+  /** True when the body was the backend's own `{detail}` JSON — i.e. the app answered, not a proxy in front of it. */
+  fromBackend: boolean
+  constructor(status: number, detail: unknown, fromBackend = false) {
     super(typeof detail === 'string' ? detail : `API error ${status}`)
     this.status = status
     this.detail = detail
+    this.fromBackend = fromBackend
   }
 }
 
@@ -21,8 +24,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   })
   if (!res.ok) {
     let detail: unknown = res.statusText
-    try { detail = (await res.json()).detail } catch { /* ignore */ }
-    throw new ApiError(res.status, detail)
+    let fromBackend = false
+    try {
+      const parsed = await res.json()
+      if (parsed && typeof parsed === 'object' && 'detail' in parsed) { detail = parsed.detail; fromBackend = true }
+    } catch { /* non-JSON body: a proxy or gateway answered, not the backend */ }
+    throw new ApiError(res.status, detail, fromBackend)
   }
   if (res.status === 204) return undefined as T
   const ct = res.headers.get('content-type') ?? ''

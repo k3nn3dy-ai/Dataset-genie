@@ -53,9 +53,17 @@ export interface DataApi {
   presets(): Promise<Preset[]>
 }
 
-/** Fall back to mock when the backend is absent (network error / proxy 502-504) or a route is still a 501 stub. */
+/**
+ * Fall back to mock when the backend is absent (network error / proxy 502-504) or a route is still a 501 stub.
+ * A 502-504 carrying the backend's own `{detail}` body is an application error (e.g. "bundle built but push
+ * failed") — the backend is up, so surface it instead of hiding it behind mock data.
+ */
 function shouldFallback(e: unknown): boolean {
-  if (e instanceof ApiError) return e.status === 501 || e.status === 502 || e.status === 503 || e.status === 504
+  if (e instanceof ApiError) {
+    if (e.status === 501) return true
+    if (e.status >= 502 && e.status <= 504) return !e.fromBackend
+    return false
+  }
   return e instanceof TypeError
 }
 
