@@ -105,8 +105,10 @@ async def test_identical_rejected_retries_then_errors(world):
     with db.session_scope() as s:
         items, _ = preferences.plan(p, {}, s)
     res = await preferences.handle(items[0], ctx)
-    assert res.status == "error" and "identical" in res.error and len(ctx.calls) == 2
+    # corruptor: attempt 1, attempt 2 with a stronger instruction, attempt 3 = fresh high-temp answer
+    assert res.status == "error" and "identical" in res.error and len(ctx.calls) == 3
     assert "identical to the original" in ctx.calls[1]["messages"][-1]["content"]
+    assert ctx.calls[2]["temperature"] == 1.3 and ctx.calls[2]["messages"][-1]["role"] == "user"
     with db.session_scope() as s:
         assert s.query(PairRecord).count() == 0
     # retry succeeds on the second attempt

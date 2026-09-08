@@ -159,8 +159,10 @@ def test_run_creates_project_and_runs_selected_stages(genie_home, tmp_path, noop
     assert all(p == pid for p, _ in noop_runner)
     assert "stage 7" in r.output and "skipped" in r.output
     # stage 8 ran build_bundle: no rows yet → bundle with zero counts + warning
-    assert (genie_home / "exports" / "incident-bot").exists()
-    assert "no exportable items" in r.output
+    # a no-op runner produces no rows, so stage 8 is skipped with a warning instead of writing an empty bundle
+    assert "stage 8 export skipped" in r.output
+    assert not (genie_home / "exports" / "incident-bot").exists()
+    assert "nothing to export" in r.output
 
 
 def test_run_is_idempotent_by_slug_and_updates_config(genie_home, tmp_path, noop_runner):

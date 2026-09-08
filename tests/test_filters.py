@@ -177,7 +177,9 @@ def test_pii_ipv4_edge_cases_from_review():
     assert filters.public_ips(text) == []
     assert filters.public_ips("multicast 239.1.2.3 and reserved 240.0.0.1") == []
     assert filters.public_ips("v1.2.3.4, version 2.3.4.5, release 3.4.5.6 and 4.5.6.7 release") == []
-    assert filters.public_ips("host 8.8.4.4 and 203.0.113.9 timed out") == ["8.8.4.4", "203.0.113.9"]
+    # well-known resolvers and RFC 5737 documentation ranges are not PII; a real public host is
+    assert filters.public_ips("host 8.8.4.4 and 203.0.113.9 timed out") == []
+    assert filters.public_ips("resolver 1.1.1.1 ok, but 51.15.22.9 and 185.199.108.153 timed out") == ["51.15.22.9", "185.199.108.153"]
 
 
 def test_uk_ni_edge_cases_from_review():

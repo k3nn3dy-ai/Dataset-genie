@@ -4,6 +4,7 @@ answer injecting one sampled flaw), `weaker` (a weaker model answers fresh), `hi
 teacher answers fresh at a high temperature)."""
 from __future__ import annotations
 
+import difflib
 from typing import Any
 
 from sqlalchemy import select
@@ -27,6 +28,17 @@ from ._common import (
 from ._compat import ItemResult, WorkItem
 
 STAGE = 4
+NEAR_IDENTICAL_RATIO = 0.97  # difflib ratio above which a "rejected" answer is not a usable pair
+
+
+def too_similar(chosen: str, rejected: str) -> bool:
+    """True when the rejected text is the chosen text or a cosmetic variant of it (judges then tie)."""
+    a, b = (chosen or "").strip(), (rejected or "").strip()
+    if a == b:
+        return True
+    if abs(len(a) - len(b)) > max(len(a), len(b)) * 0.2:
+        return False
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio() > NEAR_IDENTICAL_RATIO
 ELIGIBLE_STATUSES = ("draft", "accepted", "edited")
 
 
@@ -129,29 +141,38 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
         call_messages = prompt_messages
 
     rejected = ""
-    for attempt in range(2):
+    strategy_used = cfg.strategy
+    attempts = 3 if cfg.strategy == "corruptor" else 2
+    for attempt in range(attempts):
         if ctx.is_cancelled():
             return ItemResult(status="skipped", error="cancelled", cost_usd=call_cost(*results))
+        if cfg.strategy == "corruptor" and attempt == attempts - 1:
+            # last resort: a fresh high-temperature answer differs for sure (recorded as such)
+            strategy_used = "corruptor+hightemp"
+            call_messages, temperature = prompt_messages, cfg.hightemp_temperature
         res = await ctx.call(target_id=row_id, model=model, messages=call_messages, temperature=temperature,
                              max_tokens=pcfg.responses.max_tokens, provider=provider)
         results.append(res)
         rejected = (res.content or "").rstrip()
-        if rejected and rejected != chosen:
+        if rejected and not too_similar(chosen, rejected):
             break
-        await ctx.log("warn", f"preferences: rejected identical to chosen for {row_id} (attempt {attempt + 1})")
+        await ctx.log("warn", f"preferences: rejected (nearly) identical to chosen for {row_id} (attempt {attempt + 1})")
         if cfg.strategy == "corruptor":
             call_messages = call_messages + [
                 {"role": "assistant", "content": rejected or chosen},
-                {"role": "user", "content": "That is identical to the original. Apply the flaw so the difference is real, and reply with the rewritten text only."},
+                {"role": "user", "content": (
+                    "That is essentially identical to the original. Rewrite it again so the flaw is material: "
+                    "change or remove at least one full sentence of substance. Reply with the rewritten text only.")},
             ]
-    if not rejected or rejected == chosen:
-        return ItemResult(status="error", error="rejected answer identical to chosen after retry", cost_usd=call_cost(*results))
+    if not rejected or too_similar(chosen, rejected):
+        return ItemResult(status="error", error="rejected answer (nearly) identical to chosen after retries",
+                          cost_usd=call_cost(*results))
 
     with ctx.session() as s:
         s.add(PairRecord(
             project_id=ctx.project_id, row_id=row_id, run_id=ctx.run_id,
             rejected_messages=[{"role": "assistant", "content": rejected}],
-            strategy=cfg.strategy, flaw=flaw.name if flaw else None, model_slug=model, status="draft",
+            strategy=strategy_used, flaw=flaw.name if flaw else None, model_slug=model, status="draft",
         ))
         s.commit()
     return ItemResult(status="done", cost_usd=call_cost(*results))

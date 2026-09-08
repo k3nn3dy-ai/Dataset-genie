@@ -53,6 +53,13 @@ NON_PII_NETS = [ipaddress.ip_network(n) for n in (
     "0.0.0.0/8", "100.64.0.0/10", "169.254.0.0/16", "224.0.0.0/3",
 )]
 PRIVATE_NETS = NON_PII_NETS  # backwards-compatible name
+# Well-known public resolvers appear in ordinary DNS troubleshooting text; documentation ranges
+# (RFC 5737 TEST-NETs) exist precisely for examples. Neither identifies a real host.
+WELL_KNOWN_IPS = {
+    "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "149.112.112.112",
+    "208.67.222.222", "208.67.220.220", "4.2.2.2", "4.2.2.1",
+}
+DOC_NETS = [ipaddress.ip_network(n) for n in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")]
 _VERSION_PREFIX = re.compile(r"(?:\bv(?:ersion)?\.?|\brelease|\bver\.?|\bbuild)\s*$", re.IGNORECASE)
 _VERSION_SUFFIX = re.compile(r"^\s*(?:release|build|beta|rc\d*|stable|lts)\b", re.IGNORECASE)
 STOPWORDS = {
@@ -79,7 +86,7 @@ def public_ips(text: str) -> list[str]:
             ip = ipaddress.ip_address(quad)
         except ValueError:
             continue
-        if any(ip in net for net in NON_PII_NETS):
+        if any(ip in net for net in NON_PII_NETS) or quad in WELL_KNOWN_IPS or any(ip in net for net in DOC_NETS):
             continue
         if "255" in quad.split("."):
             continue

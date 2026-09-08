@@ -27,6 +27,7 @@ from ._common import (
 from ._compat import ItemResult, WorkItem
 
 STAGE = 5
+TIE_BREAK_MIN_GAP = 0.25  # weighted-score gap (0–5 scale) that overrides a 'tie' label
 JUDGEABLE_ROW_STATUSES = ("draft", "accepted", "edited", "flagged")
 HISTOGRAM_BINS = 10
 
@@ -254,12 +255,20 @@ async def _judge_pair(item: WorkItem, ctx, cfg: JudgeConfig, brief: str) -> Item
     chosen_scores, rejected_scores = (a_scores, b_scores) if chosen_is_a else (b_scores, a_scores)
     chosen_score = weighted_score(chosen_scores, cfg.rubric) if chosen_scores else None
     rejected_score = weighted_score(rejected_scores, cfg.rubric) if rejected_scores else None
+    tie_broken = False
+    if verdict == "tie" and chosen_score is not None and rejected_score is not None \
+            and abs(chosen_score - rejected_score) >= TIE_BREAK_MIN_GAP:
+        # The judge scored the two sides differently yet called it a tie: the scores are the
+        # considered judgement, the label is not. Only a genuinely equal scoring stays a tie.
+        verdict = "chosen" if chosen_score > rejected_score else "rejected"
+        tie_broken = True
     # JudgeResult.score is required: chosen side if known, else the row's own judge score, else the winner's
     score = chosen_score if chosen_score is not None else row_judge.get("score", rejected_score if rejected_score is not None else 0.0)
     judge = {
         "score": score, "criteria": chosen_scores or {}, "rationale": out.rationale.strip(), "verdict": verdict,
         "rejected_score": rejected_score, "rejected_criteria": rejected_scores or {},
         "order": "chosen_first" if chosen_is_a else "rejected_first", "model": m.slug,
+        "tie_broken_by_scores": tie_broken,
     }
     with ctx.session() as s:
         pair = s.get(PairRecord, item.target_id)

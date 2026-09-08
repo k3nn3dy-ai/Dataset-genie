@@ -188,3 +188,36 @@ async def test_cancelled_judge_items_are_skipped_without_calls(world):
         items, _ = judge.plan(p, {}, s)
     res = [await judge.handle(i, ctx) for i in items]
     assert {r.status for r in res} == {"skipped"} and ctx.calls == []
+
+
+async def test_judge_pair_tie_label_with_unequal_scores_is_broken_by_scores(world):
+    """Live run: the judge often labelled pairs 'tie' while scoring the sides differently (a wrong
+    fact had been injected). The scores are the considered judgement, so the higher side wins."""
+    p, _, pair_id = world
+    chosen_is_a = seeded_rng(p.id, pair_id).random() < 0.5
+    ctx = FakeCtx(p.id, 5)
+    good = {"Correctness": 5, "Actionability": 4, "Style adherence": 4, "Safety": 4}
+    worse = {"Correctness": 3, "Actionability": 4, "Style adherence": 4, "Safety": 4}
+    ctx.script(lambda model, msgs, kw: {"a": good if chosen_is_a else worse, "b": worse if chosen_is_a else good,
+                                        "verdict": "tie", "rationale": "both fine"})
+    with db.session_scope() as s:
+        items, _ = judge.plan(p, {"only": "pairs"}, s)
+    assert (await judge.handle(items[0], ctx)).status == "done"
+    with db.session_scope() as s:
+        pair = s.get(PairRecord, pair_id)
+        assert pair.status == "judged" and pair.judge["verdict"] == "chosen"
+        assert pair.judge["tie_broken_by_scores"] is True
+        assert pair.judge["score"] > pair.judge["rejected_score"]
+
+
+async def test_judge_pair_tie_with_equal_scores_stays_tie(world):
+    p, _, pair_id = world
+    ctx = FakeCtx(p.id, 5)
+    same = {"Correctness": 4, "Actionability": 4, "Style adherence": 4, "Safety": 4}
+    ctx.script(lambda model, msgs, kw: {"a": same, "b": same, "verdict": "tie", "rationale": "same"})
+    with db.session_scope() as s:
+        items, _ = judge.plan(p, {"only": "pairs"}, s)
+    assert (await judge.handle(items[0], ctx)).status == "done"
+    with db.session_scope() as s:
+        pair = s.get(PairRecord, pair_id)
+        assert pair.status == "tie" and pair.judge["tie_broken_by_scores"] is False

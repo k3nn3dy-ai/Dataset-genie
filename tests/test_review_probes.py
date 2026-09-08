@@ -367,9 +367,11 @@ def test_Q_pii_ip_and_ni_regex_edges():
     ni_spaced = bool(UK_NI_RE.search("AB 12 34 56 C"))
     print(f"\n[Q] flagged as public IPv4: {ips}; NI 'AO123456A' (invalid 2nd letter O) matched={ni_bad_second}; "
           f"'AB 12 34 56 C' matched={ni_spaced}")
-    real = public_ips("attacker at 203.0.113.42 and 8.8.8.8")
+    # 203.0.113.x is an RFC 5737 documentation range and 8.8.8.8 a well-known resolver: both allowlisted
+    # since the live run (they appear in ordinary DNS troubleshooting text); real hosts are still flagged.
+    real = public_ips("attacker at 51.15.22.9 and 185.199.108.153 (not 203.0.113.42 or 8.8.8.8)")
     print(f"[Q] FIXED: real public IPs still flagged: {real}")
-    assert ips == [] and ni_bad_second is False and ni_spaced is True and real == ["203.0.113.42", "8.8.8.8"]
+    assert ips == [] and ni_bad_second is False and ni_spaced is True and real == ["51.15.22.9", "185.199.108.153"]
 
 
 # ------------------------------------------------------------------ 6. responses
