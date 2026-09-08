@@ -1,12 +1,12 @@
 import clsx from 'clsx'
 import { usd } from '../lib/format'
 
-/** Spend / cap bar. acid <70%, amber <90%, red ≥90%. */
+/** Spend / cap bar. ok <70%, amber <90%, red ≥90%. */
 export function BudgetBar({ spend, cap, stopAt = 90, className, compact }: { spend: number; cap: number; stopAt?: number; className?: string; compact?: boolean }) {
   const p = cap > 0 ? Math.min(100, (spend / cap) * 100) : 0
-  const tone = p >= 90 ? 'red' : p >= 70 ? 'amber' : 'acid'
-  const bar = { acid: 'bg-acid shadow-[0_0_10px_rgba(182,255,46,.55)]', amber: 'bg-amber shadow-[0_0_10px_rgba(255,176,32,.55)]', red: 'bg-red shadow-[0_0_10px_rgba(255,59,92,.6)]' }[tone]
-  const txt = { acid: 'text-acid', amber: 'text-amber', red: 'text-red' }[tone]
+  const tone = p >= 90 ? 'red' : p >= 70 ? 'amber' : 'ok'
+  const bar = { ok: 'bg-ok shadow-[0_0_10px_rgba(245,245,245,.55)]', amber: 'bg-amber shadow-[0_0_10px_rgba(255,160,64,.55)]', red: 'bg-red shadow-[0_0_10px_rgba(255,74,74,.6)]' }[tone]
+  const txt = { ok: 'text-ok', amber: 'text-amber', red: 'text-red' }[tone]
   return (
     <div className={clsx('flex flex-col gap-1.5', className)} title={`Auto-stop at ${stopAt}% of cap`}>
       <div className="flex items-baseline justify-between">

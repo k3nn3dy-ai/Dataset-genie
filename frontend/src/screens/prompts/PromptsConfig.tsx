@@ -10,7 +10,7 @@ export function PersonaEditor({ personas, onChange }: { personas: Persona[]; onC
         <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <Input mono={false} value={p.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Persona name" className="!h-8 flex-1" />
-            <span className="font-mono text-[12px] text-cyan tabular-nums w-10 text-right">{p.weight}%</span>
+            <span className="font-mono text-[12px] text-orange tabular-nums w-10 text-right">{p.weight}%</span>
             <IconButton icon="trash" label="Remove persona" size="sm" onClick={() => onChange(personas.filter((_, k) => k !== i))} />
           </div>
           <Input mono={false} value={p.style} onChange={(e) => set(i, { style: e.target.value })} placeholder="style: terse, technical, expects precision" className="!h-8 !text-[13px]" />
@@ -45,7 +45,7 @@ export function StyleMix({ mix, onChange }: { mix: Record<string, number>; onCha
     <div className="flex flex-col gap-3">
       {keys.map((k) => <Slider key={k} label={k} value={mix[k]} min={0} max={100} format={(v) => `${v}%`} onChange={(v) => setOne(k, v)} />)}
       <div className="h-2 rounded-full overflow-hidden flex border border-line">
-        {keys.map((k, i) => <div key={k} style={{ width: `${mix[k]}%` }} className={['bg-cyan', 'bg-magenta', 'bg-acid', 'bg-amber', 'bg-muted'][i % 5]} title={`${k} ${mix[k]}%`} />)}
+        {keys.map((k, i) => <div key={k} style={{ width: `${mix[k]}%` }} className={['bg-orange', 'bg-steel', 'bg-ok', 'bg-amber', 'bg-muted'][i % 5]} title={`${k} ${mix[k]}%`} />)}
       </div>
     </div>
   )

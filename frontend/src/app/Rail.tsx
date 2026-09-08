@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, useParams } from 'react-router-dom'
-import { KANA, STAGES } from '../lib/types'
+import { STAGES } from '../lib/types'
 import { usePatchProject, useSummary } from '../lib/queries'
 import { useStore } from './store'
 import { Icon } from '../components/Icon'
@@ -25,19 +25,18 @@ export function Rail() {
     <aside className="w-[236px] shrink-0 sticky top-0 h-screen flex flex-col border-r border-line bg-surface1 backdrop-blur-md z-20">
       {/* Wordmark */}
       <NavLink to="/" className="flex items-center gap-3 px-4 h-[68px] border-b border-line">
-        <span className="w-9 h-9 rounded-[9px] border border-cyan flex items-center justify-center text-cyan shadow-glow bg-bg/60 shrink-0"><Icon name="sparkle" size={18} /></span>
+        <span className="w-9 h-9 rounded-[9px] border border-orange flex items-center justify-center text-orange shadow-glow bg-bg/60 shrink-0"><Icon name="sparkle" size={18} /></span>
         <span className="flex flex-col leading-none min-w-0">
           <span className="font-display font-bold uppercase text-[14px] tracking-[.06em] text-text">Dataset Genie</span>
-          <span className="font-mono text-[9.5px] text-cyan/80 tracking-[.12em] mt-1">{KANA.wordmark}</span>
         </span>
       </NavLink>
 
       <nav className="flex-1 overflow-y-auto py-3 flex flex-col">
-        <RailLink to="/" icon="folder" label="Projects" kana={KANA.projects} end />
+        <RailLink to="/" icon="folder" label="Projects" end />
 
         <div className="px-4 mt-4 mb-1.5 flex items-baseline justify-between">
           <span className="label">pipeline</span>
-          {mock && <span className="font-mono text-[9px] text-magenta border border-magenta/50 rounded-chip px-1 leading-[14px]" title="Mock data (no backend)">MOCK</span>}
+          {mock && <span className="font-mono text-[9px] text-steel border border-steel/50 rounded-chip px-1 leading-[14px]" title="Mock data (no backend)">MOCK</span>}
         </div>
         <div className="px-4 mb-2 font-ui font-semibold text-[13.5px] text-text truncate">{project?.name ?? <span className="text-dim">No project selected</span>}</div>
 
@@ -58,10 +57,9 @@ export function Rail() {
                 >
                   {({ isActive }) => (
                     <>
-                      {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-cyan shadow-glow" />}
+                      {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-orange shadow-glow" />}
                       <StageBadge n={s.n} state={isActive ? 'active' : st === 'done' || st === 'running' || st === 'paused' || st === 'failed' ? st : 'todo'} />
-                      <span className={clsx('font-ui font-semibold text-[14px] flex-1 truncate', isActive && 'text-cyan')}>{s.title}</span>
-                      <span className={clsx('font-mono text-[10px]', isActive ? 'text-cyan/80' : 'text-dim')}>{s.kana}</span>
+                      <span className={clsx('font-ui font-semibold text-[14px] flex-1 truncate', isActive && 'text-orange')}>{s.title}</span>
                     </>
                   )}
                 </NavLink>
@@ -71,8 +69,8 @@ export function Rail() {
         </ol>
 
         <div className="mt-auto pt-3 border-t border-line mx-0">
-          <RailExternal href={GUIDE_URL} icon="external" label="Guide" kana="案内" />
-          <RailLink to="/settings" icon="settings" label="Settings" kana={KANA.settings} />
+          <RailExternal href={GUIDE_URL} icon="external" label="Guide" />
+          <RailLink to="/settings" icon="settings" label="Settings" />
         </div>
       </nav>
 
@@ -104,7 +102,7 @@ function BudgetEditor({ projectId, spend, cap, stopAt }: { projectId: string; sp
         <div className="label !text-[9px] mt-1 text-dim">click to edit cap</div>
       </button>
       {/* portal: the rail's backdrop-filter would otherwise trap this fixed-position modal inside the rail */}
-      {createPortal(<Modal open={open} onClose={() => setOpen(false)} title="Project budget" kana="予算" width="sm"
+      {createPortal(<Modal open={open} onClose={() => setOpen(false)} title="Project budget" width="sm"
         footer={(<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button variant="primary" icon="check" loading={patch.isPending} onClick={save}>Save</Button></>)}>
         <div className="flex flex-col gap-4 text-[14px]">
           <p className="text-muted leading-relaxed">Spent so far: <span className="font-mono text-text">{usd(spend)}</span>. The cap is enforced on the server before every model call; a run stops automatically at the auto-stop percentage.</p>
@@ -119,26 +117,24 @@ function BudgetEditor({ projectId, spend, cap, stopAt }: { projectId: string; sp
 
 const GUIDE_URL = 'https://github.com/k3nn3dy-ai/Dataset-genie/blob/main/docs/USER_GUIDE.md'
 
-function RailExternal({ href, icon, label, kana }: { href: string; icon: 'external'; label: string; kana: string }) {
+function RailExternal({ href, icon, label }: { href: string; icon: 'external'; label: string }) {
   return (
     <a href={href} target="_blank" rel="noreferrer" title="Open the user guide in a new tab"
       className="relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors text-muted hover:text-text hover:bg-surface2/60">
       <span className="w-6 h-6 rounded-[6px] border border-line2 flex items-center justify-center"><Icon name={icon} size={13} /></span>
       <span className="font-ui font-semibold text-[14px] flex-1">{label}</span>
-      <span className="font-mono text-[10px] text-dim">{kana}</span>
     </a>
   )
 }
 
-function RailLink({ to, icon, label, kana, end }: { to: string; icon: 'folder' | 'settings'; label: string; kana: string; end?: boolean }) {
+function RailLink({ to, icon, label, end }: { to: string; icon: 'folder' | 'settings'; label: string; end?: boolean }) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => clsx('relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors', isActive ? 'stage-active text-cyan' : 'text-muted hover:text-text hover:bg-surface2/60')}>
+    <NavLink to={to} end={end} className={({ isActive }) => clsx('relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors', isActive ? 'stage-active text-orange' : 'text-muted hover:text-text hover:bg-surface2/60')}>
       {({ isActive }) => (
         <>
-          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-cyan shadow-glow" />}
-          <span className={clsx('w-6 h-6 rounded-[6px] border flex items-center justify-center', isActive ? 'border-cyan/60 text-cyan' : 'border-line2')}><Icon name={icon} size={13} /></span>
+          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-orange shadow-glow" />}
+          <span className={clsx('w-6 h-6 rounded-[6px] border flex items-center justify-center', isActive ? 'border-orange/60 text-orange' : 'border-line2')}><Icon name={icon} size={13} /></span>
           <span className="font-ui font-semibold text-[14px] flex-1">{label}</span>
-          <span className={clsx('font-mono text-[10px]', isActive ? 'text-cyan/80' : 'text-dim')}>{kana}</span>
         </>
       )}
     </NavLink>
@@ -149,14 +145,14 @@ function StageBadge({ n, state }: { n: number; state: 'done' | 'active' | 'todo'
   return (
     <span className={clsx(
       'w-6 h-6 rounded-[6px] flex items-center justify-center font-mono text-[11px] shrink-0 border',
-      state === 'active' && 'bg-cyan text-bg border-cyan shadow-glow font-bold',
-      state === 'done' && 'bg-bg/80 text-cyan border-line2',
-      state === 'running' && 'bg-bg/80 text-acid border-acid/60',
-      state === 'paused' && 'bg-bg/80 text-amber border-amber/70 shadow-[0_0_10px_rgba(255,176,32,.35)]',
+      state === 'active' && 'bg-orange text-bg border-orange shadow-glow font-bold',
+      state === 'done' && 'bg-bg/80 text-orange border-line2',
+      state === 'running' && 'bg-bg/80 text-ok border-ok/60',
+      state === 'paused' && 'bg-bg/80 text-amber border-amber/70 shadow-[0_0_10px_rgba(255,160,64,.35)]',
       state === 'failed' && 'bg-bg/80 text-red border-red/60',
       state === 'todo' && 'bg-transparent text-dim border-line2',
     )}>
-      {state === 'done' ? <Icon name="check" size={12} strokeWidth={2.4} /> : state === 'running' ? <span className="w-2 h-2 rounded-full bg-acid pulse-dot" /> : state === 'paused' ? <Icon name="pause" size={11} strokeWidth={2.6} title="Paused — resumable" /> : state === 'failed' ? <Icon name="warning" size={11} strokeWidth={2.2} /> : pad2(n)}
+      {state === 'done' ? <Icon name="check" size={12} strokeWidth={2.4} /> : state === 'running' ? <span className="w-2 h-2 rounded-full bg-ok pulse-dot" /> : state === 'paused' ? <Icon name="pause" size={11} strokeWidth={2.6} title="Paused — resumable" /> : state === 'failed' ? <Icon name="warning" size={11} strokeWidth={2.2} /> : pad2(n)}
     </span>
   )
 }

@@ -26,7 +26,7 @@ export function TaxonomyScreen() {
 
   const config = draft ? (
     <>
-      <Panel title="Generator" kana="生成">
+      <Panel title="Generator">
         <div className="flex flex-col gap-4">
           <ModelPicker label="taxonomy model" value={draft.model} onChange={(m) => setDraft({ model: m })} />
           <div className="grid grid-cols-2 gap-3">
@@ -40,13 +40,13 @@ export function TaxonomyScreen() {
           <Toggle checked={draft.negative_branches} onChange={(v) => setDraft({ negative_branches: v })} label="Negative branches" hint="Out-of-scope subtopics the model should refuse" tone="amber" />
           <Field label="task types" hint="cycle on leaf chips">
             <div className="flex flex-wrap gap-1">{draft.task_types.map((t) => <Chip key={t} tone="default" onRemove={() => setDraft({ task_types: draft.task_types.filter((x) => x !== t) })}>{t}</Chip>)}
-              <button type="button" className="label hover:text-cyan px-1" onClick={() => { const t = window.prompt('Task type (uppercase)'); if (t) setDraft({ task_types: [...draft.task_types, t.toUpperCase()] }) }}>+ add</button>
+              <button type="button" className="label hover:text-orange px-1" onClick={() => { const t = window.prompt('Task type (uppercase)'); if (t) setDraft({ task_types: [...draft.task_types, t.toUpperCase()] }) }}>+ add</button>
             </div>
           </Field>
         </div>
       </Panel>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="target rows" value={num(leaves * rowsPerLeaf)} tone="cyan" hint={`${leaves} leaves × ${rowsPerLeaf}`} />
+        <StatTile label="target rows" value={num(leaves * rowsPerLeaf)} tone="orange" hint={`${leaves} leaves × ${rowsPerLeaf}`} />
         <StatTile label="projected (config)" value={num(projected * rowsPerLeaf)} hint={`${projected} leaves from generator`} />
       </div>
     </>
@@ -54,12 +54,12 @@ export function TaxonomyScreen() {
 
   const results = tree ? (
     tree.length === 0 ? (
-      <EmptyState title="No taxonomy yet" kana="未生成" body="Run stage 01 to generate topics, subtopics and leaves from the brief — or add topics by hand and save." />
+      <EmptyState title="No taxonomy yet" body="Run stage 01 to generate topics, subtopics and leaves from the brief — or add topics by hand and save." />
     ) : (
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 font-mono text-[11px] text-muted">
-            <span><span className="text-magenta">{tree.length}</span> topics</span><span><span className="text-cyan">{leaves}</span> leaves</span><span><span className="text-amber">{negLeaves}</span> negative</span>
+            <span><span className="text-steel">{tree.length}</span> topics</span><span><span className="text-orange">{leaves}</span> leaves</span><span><span className="text-amber">{negLeaves}</span> negative</span>
             {dirty && <Chip tone="amber">unsaved</Chip>}
           </div>
           <Button size="sm" variant={dirty ? 'primary' : 'ghost'} icon="check" disabled={!dirty} loading={put.isPending} onClick={save}>Save tree</Button>

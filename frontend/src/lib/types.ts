@@ -56,14 +56,13 @@ export interface ModelInfo { id: string; name: string; context_length: number; p
 export interface TopicNode { id: string; parent_id: string | null; depth: number; label: string; slug: string; difficulty?: Difficulty | null; task_type?: string | null; is_negative: boolean; is_leaf: boolean; rows_per_leaf?: number | null; order: number; children?: TopicNode[] }
 export interface Paged<T> { items: T[]; total: number; page: number; page_size: number }
 
-export const STAGES: { n: StageNumber; key: string; title: string; kicker: string; kana: string }[] = [
-  { n: 1, key: 'taxonomy', title: 'Taxonomy', kicker: 'MAP THE DOMAIN', kana: '分類' },
-  { n: 2, key: 'prompts', title: 'Prompts', kicker: 'VOICES OF THE USER', kana: 'プロンプト' },
-  { n: 3, key: 'responses', title: 'Responses', kicker: 'THE TEACHER ANSWERS', kana: '応答' },
-  { n: 4, key: 'rejected', title: 'Rejected', kicker: 'MANUFACTURE THE FLAW', kana: '却下' },
-  { n: 5, key: 'judge', title: 'Judge', kicker: 'A SECOND OPINION', kana: '審査' },
-  { n: 6, key: 'filter', title: 'Filter', kicker: 'CLEAN THE SIGNAL', kana: '濾過' },
-  { n: 7, key: 'review', title: 'Review', kicker: 'HUMAN IN THE LOOP', kana: '検査' },
-  { n: 8, key: 'export', title: 'Export', kicker: 'SHIP THE DATASET', kana: '出力' },
+export const STAGES: { n: StageNumber; key: string; title: string; kicker: string }[] = [
+  { n: 1, key: 'taxonomy', title: 'Taxonomy', kicker: 'MAP THE DOMAIN' },
+  { n: 2, key: 'prompts', title: 'Prompts', kicker: 'VOICES OF THE USER' },
+  { n: 3, key: 'responses', title: 'Responses', kicker: 'THE TEACHER ANSWERS' },
+  { n: 4, key: 'rejected', title: 'Rejected', kicker: 'MANUFACTURE THE FLAW' },
+  { n: 5, key: 'judge', title: 'Judge', kicker: 'A SECOND OPINION' },
+  { n: 6, key: 'filter', title: 'Filter', kicker: 'CLEAN THE SIGNAL' },
+  { n: 7, key: 'review', title: 'Review', kicker: 'HUMAN IN THE LOOP' },
+  { n: 8, key: 'export', title: 'Export', kicker: 'SHIP THE DATASET' },
 ]
-export const KANA = { projects: 'プロジェクト', settings: '設定', wordmark: 'データセット・ジーニー' }

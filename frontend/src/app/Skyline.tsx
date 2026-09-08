@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { mulberry32 } from '../lib/rng'
 
 // Procedural tower-block skyline with scattered neon window dots. Seeded so it never flickers between renders.
-const WINDOW_COLOURS = ['#00f0ff', '#ff2bd6', '#ffb020', '#7ff7ff']
+const WINDOW_COLOURS = ['#ff6a1a', '#b3b3b3', '#ffa040', '#ff9a5c']
 
 export function Skyline({ seed = 1337, width = 1920, height = 260 }: { seed?: number; width?: number; height?: number }) {
   const { blocks, windows } = useMemo(() => {
@@ -34,13 +34,13 @@ export function Skyline({ seed = 1337, width = 1920, height = 260 }: { seed?: nu
     <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMax slice" className="absolute inset-x-0 bottom-0 w-full h-[260px]" aria-hidden>
       <defs>
         <linearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#06080b" stopOpacity="0" />
-          <stop offset="1" stopColor="#06080b" stopOpacity="1" />
+          <stop offset="0" stopColor="#0a0a0a" stopOpacity="0" />
+          <stop offset="1" stopColor="#0a0a0a" stopOpacity="1" />
         </linearGradient>
         <filter id="win-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="1.2" /></filter>
       </defs>
       {blocks.map((b, i) => (
-        <rect key={i} x={b.x} y={b.y} width={b.w} height={b.h} fill={`rgba(8,12,17,${b.shade})`} stroke="rgba(28,42,51,.6)" strokeWidth={1} />
+        <rect key={i} x={b.x} y={b.y} width={b.w} height={b.h} fill={`rgba(14,14,14,${b.shade})`} stroke="rgba(38,38,38,.6)" strokeWidth={1} />
       ))}
       {windows.map((w, i) => (
         <g key={i}>

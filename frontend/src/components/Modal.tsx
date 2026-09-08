@@ -2,11 +2,11 @@ import clsx from 'clsx'
 import { useEffect, type ReactNode } from 'react'
 import { Button, IconButton } from './Button'
 
-interface Props { open: boolean; onClose: () => void; title: ReactNode; kana?: string; children: ReactNode; footer?: ReactNode; width?: 'sm' | 'md' | 'lg'; tone?: 'default' | 'amber' | 'red' }
+interface Props { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: 'sm' | 'md' | 'lg'; tone?: 'default' | 'amber' | 'red' }
 
 const W = { sm: 'max-w-[440px]', md: 'max-w-[600px]', lg: 'max-w-[820px]' }
 
-export function Modal({ open, onClose, title, kana, children, footer, width = 'md', tone = 'default' }: Props) {
+export function Modal({ open, onClose, title, children, footer, width = 'md', tone = 'default' }: Props) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -21,7 +21,6 @@ export function Modal({ open, onClose, title, kana, children, footer, width = 'm
         <header className="flex items-center justify-between px-5 h-12 border-b border-line">
           <div className="flex items-baseline gap-2">
             <h2 className="font-display font-bold uppercase text-[15px] tracking-[.06em]">{title}</h2>
-            {kana && <span className="font-mono text-[10px] text-dim">{kana}</span>}
           </div>
           <IconButton icon="x" label="Close" size="sm" onClick={onClose} />
         </header>

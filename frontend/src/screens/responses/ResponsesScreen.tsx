@@ -23,18 +23,18 @@ export function ResponsesScreen() {
 
   const config = draft ? (
     <>
-      <Panel title="Teacher ensemble" kana="教師"><EnsembleEditor cfg={draft} onChange={setDraft} /></Panel>
+      <Panel title="Teacher ensemble"><EnsembleEditor cfg={draft} onChange={setDraft} /></Panel>
       <SystemPromptPanel cfg={draft} onChange={setDraft} />
       <MultiTurnPanel cfg={draft} onChange={setDraft} />
     </>
   ) : <Spinner />
 
   const results = rows.isLoading ? <Spinner /> : items.length === 0 ? (
-    <EmptyState title="No responses yet" kana="未生成" body="Run stage 03 to have the teacher ensemble answer every prompt. Refusals are detected and bucketed, never deleted." />
+    <EmptyState title="No responses yet" body="Run stage 03 to have the teacher ensemble answer every prompt. Refusals are detected and bucketed, never deleted." />
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="responses" value={items.length} tone="cyan" />
+        <StatTile size="sm" label="responses" value={items.length} tone="orange" />
         <StatTile size="sm" label="refusals" value={refusals} tone={refusals > 0 ? 'amber' : 'default'} hint={`${((refusals / items.length) * 100).toFixed(1)}%`} />
         <StatTile size="sm" label="multi-turn" value={multiTurn} hint={`${((multiTurn / items.length) * 100).toFixed(0)}% of rows`} />
         <StatTile size="sm" label="models" value={new Set(items.map((r) => r.metadata.models.responses)).size} />
@@ -50,10 +50,10 @@ export function ResponsesScreen() {
           { key: 'status', header: 'status', render: (r) => <Chip tone={toneFor(r.status)}>{r.status}</Chip>, sortValue: (r) => r.status },
         ]}
       />
-      <Panel title="Refusal rate · model × topic" kana="拒否" padded={false} bodyClassName="p-3">
+      <Panel title="Refusal rate · model × topic" padded={false} bodyClassName="p-3">
         {matrix.data ? <RefusalHeatmap cells={matrix.data} /> : <Spinner />}
       </Panel>
-      <Modal open={!!open} onClose={() => setOpen(null)} title={open?.metadata.id ?? ''} kana="会話" width="lg">
+      <Modal open={!!open} onClose={() => setOpen(null)} title={open?.metadata.id ?? ''} width="lg">
         {open && <Conversation messages={open.messages} />}
       </Modal>
     </div>

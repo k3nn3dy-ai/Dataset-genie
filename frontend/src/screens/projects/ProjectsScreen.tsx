@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Header } from '../../app/Header'
-import { KANA } from '../../lib/types'
 import { useDeleteProject, useProjects } from '../../lib/queries'
 import { Button, ConfirmModal, EmptyState, ErrorState, Spinner, StatTile } from '../../components'
 import { ProjectCard } from './ProjectCard'
@@ -18,20 +17,20 @@ export function ProjectsScreen() {
   return (
     <>
       <Header
-        kicker="STAGE 00 · CHOOSE YOUR DOMAIN" kana={KANA.projects} title="Projects" numeral="00"
+        kicker="STAGE 00 · CHOOSE YOUR DOMAIN" title="Projects" numeral="00"
         subtitle="Each project is one dataset: a brief, a taxonomy, eight re-runnable stages and a hard budget cap."
         actions={<Button variant="primary" size="lg" icon="plus" onClick={() => setOpen(true)} data-testid="run-stage">New project</Button>}
       />
       {projects.isLoading && <Spinner />}
       {projects.error && <ErrorState error={projects.error} onRetry={() => projects.refetch()} />}
       {projects.data && list.length === 0 && (
-        <EmptyState icon="folder" title="No projects yet" kana="空" body="Create a project from a preset. You can edit every stage's configuration before running it." action={{ label: 'New project', icon: 'plus', onClick: () => setOpen(true) }} />
+        <EmptyState icon="folder" title="No projects yet" body="Create a project from a preset. You can edit every stage's configuration before running it." action={{ label: 'New project', icon: 'plus', onClick: () => setOpen(true) }} />
       )}
       {list.length > 0 && (
         <>
           <div className="grid grid-cols-4 gap-3 mb-5">
-            <StatTile label="projects" value={list.length} tone="cyan" />
-            <StatTile label="total spend" value={usd(totalSpend)} tone="magenta" />
+            <StatTile label="projects" value={list.length} tone="orange" />
+            <StatTile label="total spend" value={usd(totalSpend)} tone="steel" />
             <StatTile label="data types" value={[...new Set(list.flatMap((p) => p.data_types))].join(' · ')} size="sm" />
             <StatTile label="mode" value={<span className="text-[15px]">local · OpenRouter</span>} size="sm" hint="~/.dataset-genie" />
           </div>

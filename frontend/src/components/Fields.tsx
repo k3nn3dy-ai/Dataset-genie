@@ -59,7 +59,7 @@ export function Segmented<K extends string>({ options, value, onChange, classNam
       {options.map((o) => (
         <button
           key={o.key} type="button" role="radio" aria-checked={o.key === value} onClick={() => onChange(o.key)}
-          className={clsx('h-7 px-3 rounded-[6px] font-display font-bold uppercase text-[11px] tracking-[.08em] transition-colors focus-ring', o.key === value ? 'bg-cyan text-bg' : 'text-muted hover:text-text')}
+          className={clsx('h-7 px-3 rounded-[6px] font-display font-bold uppercase text-[11px] tracking-[.08em] transition-colors focus-ring', o.key === value ? 'bg-orange text-bg' : 'text-muted hover:text-text')}
         >
           {o.label}
         </button>
@@ -77,10 +77,10 @@ export function RadioGroup<K extends string>({ options, value, onChange, classNa
         return (
           <button
             key={o.key} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.key)}
-            className={clsx('flex items-start gap-3 text-left px-3 py-2 rounded-btn border transition-colors focus-ring', on ? 'border-cyan/50 bg-cyan/10' : 'border-line hover:border-line2')}
+            className={clsx('flex items-start gap-3 text-left px-3 py-2 rounded-btn border transition-colors focus-ring', on ? 'border-orange/50 bg-orange/10' : 'border-line hover:border-line2')}
           >
-            <span className={clsx('mt-[3px] w-3.5 h-3.5 rounded-full border shrink-0 flex items-center justify-center', on ? 'border-cyan' : 'border-line2')}>
-              {on && <span className="w-1.5 h-1.5 rounded-full bg-cyan shadow-glow" />}
+            <span className={clsx('mt-[3px] w-3.5 h-3.5 rounded-full border shrink-0 flex items-center justify-center', on ? 'border-orange' : 'border-line2')}>
+              {on && <span className="w-1.5 h-1.5 rounded-full bg-orange shadow-glow" />}
             </span>
             <span className="flex flex-col">
               <span className="text-[14px] font-semibold leading-tight">{o.label}</span>

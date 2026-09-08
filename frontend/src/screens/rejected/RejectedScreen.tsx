@@ -25,52 +25,52 @@ export function RejectedScreen() {
 
   const config = draft ? (
     <>
-      <Panel title="Strategy" kana="戦略">
+      <Panel title="Strategy">
         <RadioGroup value={draft.strategy} onChange={(strategy) => setDraft({ strategy })} options={[
           { key: 'corruptor', label: 'Corruptor', hint: 'Same teacher, instructed to inject exactly one flaw from the weighted list' },
           { key: 'weaker', label: 'Weaker model', hint: 'A cheaper model answers the same prompt' },
           { key: 'hightemp', label: 'High temperature', hint: 'Teacher at temperature ≥ 1.2' },
         ]} />
         {draft.strategy === 'weaker' && <div className="mt-3"><ModelPicker label="weaker model" value={draft.weaker_model} onChange={(weaker_model) => setDraft({ weaker_model })} /></div>}
-        {draft.strategy === 'hightemp' && <div className="mt-3"><Slider label="temperature" value={draft.hightemp_temperature} min={1.2} max={2} step={0.05} format={(v) => v.toFixed(2)} tone="magenta" onChange={(hightemp_temperature) => setDraft({ hightemp_temperature })} /></div>}
+        {draft.strategy === 'hightemp' && <div className="mt-3"><Slider label="temperature" value={draft.hightemp_temperature} min={1.2} max={2} step={0.05} format={(v) => v.toFixed(2)} tone="steel" onChange={(hightemp_temperature) => setDraft({ hightemp_temperature })} /></div>}
       </Panel>
-      <Panel title="Flaw list" kana="欠陥" actions={<span className="font-mono text-[10px] text-dim">weights {flawTotal}</span>}>
+      <Panel title="Flaw list" actions={<span className="font-mono text-[10px] text-dim">weights {flawTotal}</span>}>
         <div className={draft.strategy === 'corruptor' ? 'flex flex-col gap-3' : 'flex flex-col gap-3 opacity-40 pointer-events-none'}>
           {draft.flaws.map((f, i) => (
             <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Input value={f.name} onChange={(e) => setDraft({ flaws: draft.flaws.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} className="!h-7 flex-1" />
-                <span className="font-mono text-[11px] text-magenta tabular-nums w-12 text-right">{flawTotal ? ((f.weight / flawTotal) * 100).toFixed(0) : 0}%</span>
+                <span className="font-mono text-[11px] text-steel tabular-nums w-12 text-right">{flawTotal ? ((f.weight / flawTotal) * 100).toFixed(0) : 0}%</span>
                 <IconButton icon="trash" label="Remove flaw" size="sm" onClick={() => setDraft({ flaws: draft.flaws.filter((_, k) => k !== i) })} />
               </div>
               <Input mono={false} value={f.instruction} onChange={(e) => setDraft({ flaws: draft.flaws.map((x, k) => (k === i ? { ...x, instruction: e.target.value } : x)) })} className="!h-7 !text-[12.5px]" />
-              <Slider value={f.weight} min={0} max={100} tone="magenta" onChange={(w) => setDraft({ flaws: draft.flaws.map((x, k) => (k === i ? { ...x, weight: w } : x)) })} />
+              <Slider value={f.weight} min={0} max={100} tone="steel" onChange={(w) => setDraft({ flaws: draft.flaws.map((x, k) => (k === i ? { ...x, weight: w } : x)) })} />
             </div>
           ))}
           <Button size="sm" variant="outline" icon="plus" className="self-start" onClick={() => setDraft({ flaws: [...draft.flaws, { name: 'new_flaw', weight: 10, instruction: 'Describe the flaw to inject.' }] })}>Add flaw</Button>
         </div>
       </Panel>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="eligible pairs" value={eligible} tone="cyan" hint="eligible rows" />
-        <StatTile label="est. cost" value={usd(estCost)} tone="magenta" hint={`${draft.strategy} · ${eligible} calls`} />
+        <StatTile label="eligible pairs" value={eligible} tone="orange" hint="eligible rows" />
+        <StatTile label="est. cost" value={usd(estCost)} tone="steel" hint={`${draft.strategy} · ${eligible} calls`} />
       </div>
     </>
   ) : <Spinner />
 
   const results = pairs.isLoading ? <Spinner /> : items.length === 0 ? (
-    <EmptyState title="No pairs yet" kana="未生成" body={notDpo ? 'This project has no DPO data type; pairs are optional.' : 'Run stage 04 to manufacture a rejected response for every accepted row.'} />
+    <EmptyState title="No pairs yet" body={notDpo ? 'This project has no DPO data type; pairs are optional.' : 'Run stage 04 to manufacture a rejected response for every accepted row.'} />
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="pairs" value={items.length} tone="cyan" />
-        <StatTile size="sm" label="ties (judged)" value={items.filter((p) => p.metadata.judge?.verdict === 'tie').length} tone="magenta" hint="excluded from DPO" />
+        <StatTile size="sm" label="pairs" value={items.length} tone="orange" />
+        <StatTile size="sm" label="ties (judged)" value={items.filter((p) => p.metadata.judge?.verdict === 'tie').length} tone="steel" hint="excluded from DPO" />
         <StatTile size="sm" label="strategy" value={<span className="text-[15px]">{items[0]?.metadata.strategy}</span>} />
         <StatTile size="sm" label="flaws used" value={new Set(items.map((p) => p.metadata.flaw)).size} />
       </div>
       <MonoTable rows={items} rowKey={(p) => p.metadata.id} onRowClick={setActive} activeKey={current?.metadata.id} maxHeight="220px"
         columns={[
           { key: 'id', header: 'id', render: (p) => <IdCell id={p.metadata.id} />, sortValue: (p) => p.metadata.id },
-          { key: 'flaw', header: 'flaw', render: (p) => <Chip tone="magenta">{p.metadata.flaw}</Chip>, sortValue: (p) => p.metadata.flaw ?? '' },
+          { key: 'flaw', header: 'flaw', render: (p) => <Chip tone="steel">{p.metadata.flaw}</Chip>, sortValue: (p) => p.metadata.flaw ?? '' },
           { key: 'leaf', header: 'leaf', render: (p) => <span className="text-muted">{p.metadata.leaf_path.at(-1)}</span> },
           { key: 'verdict', header: 'verdict', render: (p) => <Chip tone={toneFor(p.metadata.judge?.verdict ?? 'dim')}>{p.metadata.judge?.verdict ?? 'unjudged'}</Chip>, sortValue: (p) => p.metadata.judge?.verdict ?? '' },
         ]} />

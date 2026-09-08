@@ -32,12 +32,12 @@ export function ReviewScreen() {
 
   const config = (
     <>
-      <Panel title="Search & filters" kana="検索">
+      <Panel title="Search & filters">
         <div className="flex flex-col gap-4">
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search id, prompt, response…" />
           <div>
             <span className="label block mb-1.5">status</span>
-            <div className="flex flex-wrap gap-1">{STATUSES.map((s) => <Chip key={s} tone={status === s ? 'cyan' : 'dim'} active={status === s} onClick={() => setStatus(s)}>{s}</Chip>)}</div>
+            <div className="flex flex-wrap gap-1">{STATUSES.map((s) => <Chip key={s} tone={status === s ? 'orange' : 'dim'} active={status === s} onClick={() => setStatus(s)}>{s}</Chip>)}</div>
           </div>
           <Slider label="min score" value={minScore} min={0} max={5} step={0.1} format={(v) => (v === 0 ? 'any' : v.toFixed(1))} tone="amber" onChange={setMinScore} />
           <div>
@@ -51,20 +51,20 @@ export function ReviewScreen() {
         </div>
       </Panel>
       <div className="grid grid-cols-3 gap-2">
-        <StatTile size="sm" label="matching" value={items.length} tone="cyan" />
-        <StatTile size="sm" label="accepted" value={counts.accepted} tone="acid" />
+        <StatTile size="sm" label="matching" value={items.length} tone="orange" />
+        <StatTile size="sm" label="accepted" value={counts.accepted} tone="ok" />
         <StatTile size="sm" label="flagged" value={counts.flagged} tone="amber" hint={`${counts.low} low_score`} />
       </div>
     </>
   )
 
   const results = rows.isLoading ? <Spinner /> : items.length === 0 && !q && status === 'all' ? (
-    <EmptyState title="No rows" kana="空" body="No rows match. Adjust the filters on the left." />
+    <EmptyState title="No rows" body="No rows match. Adjust the filters on the left." />
   ) : (
     <div className="flex flex-col gap-2">
       {sel.size > 0 && (
-        <div className="panel !bg-surface2 flex items-center gap-2 px-3 h-10 border-cyan/40">
-          <span className="font-mono text-[11px] text-cyan">{sel.size} selected</span>
+        <div className="panel !bg-surface2 flex items-center gap-2 px-3 h-10 border-orange/40">
+          <span className="font-mono text-[11px] text-orange">{sel.size} selected</span>
           <span className="flex-1" />
           <Button size="sm" variant="primary" icon="check" loading={bulk.isPending} onClick={() => bulk.mutate({ ids: [...sel], action: 'accept' }, { onSuccess: () => setSel(new Set()) })}>Accept</Button>
           <Button size="sm" variant="outline" icon="flag" loading={bulk.isPending} onClick={() => bulk.mutate({ ids: [...sel], action: 'flag' }, { onSuccess: () => setSel(new Set()) })}>Flag</Button>
@@ -77,7 +77,7 @@ export function ReviewScreen() {
           { key: 'id', header: 'id', render: (r: RowItem) => <IdCell id={r.metadata.id} max={150} />, sortValue: (r) => r.metadata.id },
           { key: 'leaf', header: 'leaf', render: (r) => <span className="text-muted">{truncate(r.metadata.leaf_path.at(-1) ?? '', 18)}</span>, sortValue: (r) => r.metadata.leaf_path.at(-1) ?? '' },
           { key: 'prompt', header: 'prompt excerpt', render: (r) => <TextCell max={140} className="text-text/80" text={(r.messages.find((m) => m.role === 'user')?.content ?? '').replace(/\n+/g, ' ')} /> },
-          { key: 'score', header: 'score', align: 'right', width: '60px', render: (r) => <span className={(r.metadata.judge?.score ?? 5) < 3 ? 'text-amber' : 'text-acid'}>{r.metadata.judge?.score.toFixed(1) ?? '—'}</span>, sortValue: (r) => r.metadata.judge?.score ?? -1 },
+          { key: 'score', header: 'score', align: 'right', width: '60px', render: (r) => <span className={(r.metadata.judge?.score ?? 5) < 3 ? 'text-amber' : 'text-ok'}>{r.metadata.judge?.score.toFixed(1) ?? '—'}</span>, sortValue: (r) => r.metadata.judge?.score ?? -1 },
           { key: 'status', header: 'status', width: '90px', render: (r) => <Chip tone={toneFor(r.status)}>{r.status}</Chip>, sortValue: (r) => r.status },
           { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1">{r.metadata.flags.slice(0, 2).map((f) => <Chip key={f} tone={toneFor(f)}>{f}</Chip>)}{r.metadata.flags.length > 2 && <Chip tone="dim" title={r.metadata.flags.slice(2).join(', ')}>+{r.metadata.flags.length - 2}</Chip>}</div> },
         ]} />

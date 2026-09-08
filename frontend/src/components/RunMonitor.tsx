@@ -54,10 +54,10 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
 
   return (
     <Panel
-      title="Run monitor" kana="実行" className={className} padded={false}
+      title="Run monitor" className={className} padded={false}
       actions={snap && (
         <>
-          <Chip tone={toneFor(live ? 'running' : snap.status)}>{live && <span className="w-1.5 h-1.5 rounded-full bg-acid pulse-dot" />}{snap.status}</Chip>
+          <Chip tone={toneFor(live ? 'running' : snap.status)}>{live && <span className="w-1.5 h-1.5 rounded-full bg-ok pulse-dot" />}{snap.status}</Chip>
           <span className="font-mono text-[10px] text-dim">{snap.runId}</span>
           {live && <Button size="sm" variant="danger" icon="stop" onClick={() => cancel.mutate(snap.runId)} loading={cancel.isPending}>Cancel</Button>}
         </>
@@ -66,13 +66,13 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
       {snap ? (
         <div className="p-4 flex flex-col gap-3 border-b border-line">
           <div className="grid grid-cols-4 gap-2">
-            <StatTile size="sm" label="done / total" value={`${snap.done}`} unit={`/ ${snap.total}`} tone="cyan" />
-            <StatTile size="sm" label="rows / min" value={snap.rows_per_min.toFixed(1)} tone="acid" />
+            <StatTile size="sm" label="done / total" value={`${snap.done}`} unit={`/ ${snap.total}`} tone="orange" />
+            <StatTile size="sm" label="rows / min" value={snap.rows_per_min.toFixed(1)} tone="ok" />
             <StatTile size="sm" label="refusal rate" value={pct(refPct, 1)} tone={refPct > 10 ? 'amber' : 'default'} />
             <StatTile size="sm" label="errors" value={snap.errors} tone={snap.errors > 0 ? 'red' : 'default'} hint={`spend ${usd(snap.spend_usd)}`} />
           </div>
           <div className="h-1.5 rounded-full bg-bg/70 border border-line overflow-hidden">
-            <div className={clsx('h-full transition-all duration-300', live ? 'bg-acid shadow-[0_0_10px_rgba(182,255,46,.6)]' : snap.status === 'done' ? 'bg-cyan' : 'bg-red')} style={{ width: `${p}%` }} />
+            <div className={clsx('h-full transition-all duration-300', live ? 'bg-ok shadow-[0_0_10px_rgba(245,245,245,.6)]' : snap.status === 'done' ? 'bg-orange' : 'bg-red')} style={{ width: `${p}%` }} />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="label">workers</span>
@@ -81,9 +81,9 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
               <span
                 key={id} title={`w${id} · ${w.status}${w.target_id ? ` · ${w.target_id}` : ''}${w.model ? ` · ${w.model}` : ''}`}
                 className={clsx('h-4 min-w-[26px] px-1 rounded-chip border font-mono text-[9px] flex items-center justify-center',
-                  w.status === 'calling' && 'border-acid/60 text-acid worker-calling',
+                  w.status === 'calling' && 'border-ok/60 text-ok worker-calling',
                   w.status === 'idle' && 'border-line2 text-dim',
-                  w.status === 'done' && 'border-cyan/50 text-cyan',
+                  w.status === 'done' && 'border-orange/50 text-orange',
                   w.status === 'error' && 'border-red/60 text-red')}
               >w{id}</span>
             ))}
@@ -99,7 +99,7 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
               {(snap?.log ?? []).map((l, i) => (
                 <div key={i} className="flex gap-2">
                   <span className="text-dim shrink-0">{fmtTime(l.ts)}</span>
-                  <span className={clsx('shrink-0 w-10 uppercase', l.level === 'error' ? 'text-red' : l.level === 'warn' ? 'text-amber' : l.level === 'debug' ? 'text-dim' : 'text-cyan')}>{l.level}</span>
+                  <span className={clsx('shrink-0 w-10 uppercase', l.level === 'error' ? 'text-red' : l.level === 'warn' ? 'text-amber' : l.level === 'debug' ? 'text-dim' : 'text-orange')}>{l.level}</span>
                   <span className="text-text/85">{l.msg}</span>
                 </div>
               ))}
@@ -112,7 +112,7 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
                     {log.data.items.slice(0, 60).map((c) => (
                       <tr key={c.id} className="border-t border-line/60">
                         <td className="px-2 py-[3px] text-dim">{fmtTime(c.ts)}</td><td className="px-2 py-[3px] text-muted truncate max-w-[160px]">{c.model}</td><td className="px-2 py-[3px] truncate max-w-[200px]">{c.target_id}</td>
-                        <td className="px-2 py-[3px] text-right tabular-nums">{c.tokens_in}/{c.tokens_out}</td><td className="px-2 py-[3px] text-right tabular-nums">{c.latency_ms}</td><td className="px-2 py-[3px] text-right tabular-nums text-cyan">{c.cost_usd.toFixed(4)}</td>
+                        <td className="px-2 py-[3px] text-right tabular-nums">{c.tokens_in}/{c.tokens_out}</td><td className="px-2 py-[3px] text-right tabular-nums">{c.latency_ms}</td><td className="px-2 py-[3px] text-right tabular-nums text-orange">{c.cost_usd.toFixed(4)}</td>
                         <td className="px-2 py-[3px] text-center"><Chip tone={toneFor(c.status)}>{c.status}</Chip></td>
                       </tr>
                     ))}

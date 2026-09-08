@@ -49,9 +49,9 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
       <div className="relative">
         <button
           type="button" onClick={() => setOpen((o) => !o)}
-          className={clsx('field w-full h-10 flex items-center gap-2.5 text-left', open && '!border-cyan/60', warn && '!border-amber/60')}
+          className={clsx('field w-full h-10 flex items-center gap-2.5 text-left', open && '!border-orange/60', warn && '!border-amber/60')}
         >
-          <span className="w-6 h-6 rounded-[5px] bg-surface2 border border-line2 flex items-center justify-center text-cyan shrink-0"><Icon name="sparkle" size={12} /></span>
+          <span className="w-6 h-6 rounded-[5px] bg-surface2 border border-line2 flex items-center justify-center text-orange shrink-0"><Icon name="sparkle" size={12} /></span>
           <span className="flex flex-col min-w-0 flex-1 leading-tight">
             <span className="text-[12.5px] text-text truncate">{value.slug || 'Select a model'}</span>
             {current && <span className="text-[10px] text-muted truncate">{current.name} · ${current.prompt_price_per_m}/${current.completion_price_per_m} per 1M · {contextK(current.context_length)} ctx</span>}
@@ -72,14 +72,14 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
               {list.map((m) => (
                 <button
                   key={m.id} type="button" onClick={() => pickModel(m)}
-                  className={clsx('w-full grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-3 py-1.5 text-left hover:bg-cyan/10 border-t border-line/50', m.id === value.slug && 'bg-cyan/10')}
+                  className={clsx('w-full grid grid-cols-[1fr_auto_auto_auto] gap-x-3 items-center px-3 py-1.5 text-left hover:bg-orange/10 border-t border-line/50', m.id === value.slug && 'bg-orange/10')}
                 >
                   <span className="flex flex-col min-w-0 leading-tight">
                     <span className="font-mono text-[12px] truncate">{m.id}</span>
                     <span className="text-[11px] text-muted truncate">{m.name}{!m.supports_json_schema && <span className="text-dim"> · no json</span>}{!m.supports_tools && <span className="text-dim"> · no tools</span>}</span>
                   </span>
-                  <span className="font-mono text-[11px] text-cyan tabular-nums text-right">{m.prompt_price_per_m.toFixed(2)}</span>
-                  <span className="font-mono text-[11px] text-magenta tabular-nums text-right">{m.completion_price_per_m.toFixed(2)}</span>
+                  <span className="font-mono text-[11px] text-orange tabular-nums text-right">{m.prompt_price_per_m.toFixed(2)}</span>
+                  <span className="font-mono text-[11px] text-steel tabular-nums text-right">{m.completion_price_per_m.toFixed(2)}</span>
                   <span className="font-mono text-[11px] text-muted tabular-nums text-right">{contextK(m.context_length)}</span>
                 </button>
               ))}

@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Icon, type IconName } from './Icon'
 
-export type ButtonVariant = 'primary' | 'ghost' | 'danger' | 'outline' | 'magenta'
+export type ButtonVariant = 'primary' | 'ghost' | 'danger' | 'outline' | 'steel'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
@@ -15,10 +15,10 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'
 }
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-cyan text-bg border border-cyan hover:shadow-glow hover:bg-cyanSoft active:translate-y-px',
-  magenta: 'bg-magenta text-bg border border-magenta hover:shadow-glowMagenta active:translate-y-px',
+  primary: 'bg-orange text-bg border border-orange hover:shadow-glow hover:bg-orangeSoft active:translate-y-px',
+  steel: 'bg-steel text-bg border border-steel hover:shadow-glowSteel active:translate-y-px',
   ghost: 'bg-transparent text-text border border-transparent hover:bg-surface2 hover:border-line2',
-  outline: 'bg-transparent text-cyan border border-cyan/50 hover:border-cyan hover:bg-cyan/10',
+  outline: 'bg-transparent text-orange border border-orange/50 hover:border-orange hover:bg-orange/10',
   danger: 'bg-transparent text-red border border-red/50 hover:bg-red/10 hover:border-red',
 }
 const SIZE: Record<ButtonSize, string> = {

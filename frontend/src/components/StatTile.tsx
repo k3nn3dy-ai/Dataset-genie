@@ -1,10 +1,10 @@
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 
-export type Tone = 'default' | 'cyan' | 'magenta' | 'acid' | 'amber' | 'red'
+export type Tone = 'default' | 'orange' | 'steel' | 'ok' | 'amber' | 'red'
 
 const VALUE_TONE: Record<Tone, string> = {
-  default: 'text-text', cyan: 'text-cyan', magenta: 'text-magenta', acid: 'text-acid', amber: 'text-amber', red: 'text-red',
+  default: 'text-text', orange: 'text-orange', steel: 'text-steel', ok: 'text-ok', amber: 'text-amber', red: 'text-red',
 }
 
 interface Props {

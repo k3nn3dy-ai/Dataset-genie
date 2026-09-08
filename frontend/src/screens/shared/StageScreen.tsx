@@ -77,7 +77,7 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
 
   const header = (
     <Header
-      kicker={`STAGE ${pad2(stage)} · ${meta.kicker}`} kana={meta.kana} title={meta.title} numeral={pad2(stage)} subtitle={subtitle}
+      kicker={`STAGE ${pad2(stage)} · ${meta.kicker}`} title={meta.title} numeral={pad2(stage)} subtitle={subtitle}
       actions={(
         <>
           {extraActions}
@@ -91,7 +91,7 @@ export function StageScreen({ stage, config, results, resultsCount, params, runL
     return (
       <>
         {header}
-        <EmptyState icon="folder" title="No project selected" kana="未選択" body="Open a project from the Projects list to configure and run this stage." action={{ label: 'Go to projects', onClick: () => navigate('/'), icon: 'folder' }} />
+        <EmptyState icon="folder" title="No project selected" body="Open a project from the Projects list to configure and run this stage." action={{ label: 'Go to projects', onClick: () => navigate('/'), icon: 'folder' }} />
       </>
     )
   }

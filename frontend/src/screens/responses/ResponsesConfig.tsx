@@ -26,7 +26,7 @@ export function EnsembleEditor({ cfg, onChange }: { cfg: ResponsesConfig; onChan
         </div>
       ))}
       {adding ? (
-        <div className="rounded-btn border border-cyan/40 p-2.5 flex flex-col gap-2">
+        <div className="rounded-btn border border-orange/40 p-2.5 flex flex-col gap-2">
           <ModelPicker label="add teacher" value={pending} onChange={setPending} compact />
           <div className="flex gap-2 justify-end"><Button size="sm" onClick={() => setAdding(false)}>Cancel</Button><Button size="sm" variant="primary" icon="plus" onClick={() => { onChange({ ensemble: [...cfg.ensemble, pending] }); setAdding(false); setPending(newSlot()) }}>Add</Button></div>
         </div>
@@ -35,14 +35,14 @@ export function EnsembleEditor({ cfg, onChange }: { cfg: ResponsesConfig; onChan
         <Slider label="temperature" value={cfg.temperature} min={0} max={2} step={0.05} format={(v) => v.toFixed(2)} onChange={(temperature) => onChange({ temperature })} />
         <Field label="max tokens"><NumberInput value={cfg.max_tokens} min={128} max={32000} step={128} onChange={(max_tokens) => onChange({ max_tokens })} /></Field>
       </div>
-      <Toggle checked={cfg.reasoning_tags} onChange={(reasoning_tags) => onChange({ reasoning_tags })} label={<span>Wrap reasoning in <span className="font-mono text-cyan">&lt;think&gt;</span> tags</span>} hint="Kept as a `reasoning` field on GRPO export" />
+      <Toggle checked={cfg.reasoning_tags} onChange={(reasoning_tags) => onChange({ reasoning_tags })} label={<span>Wrap reasoning in <span className="font-mono text-orange">&lt;think&gt;</span> tags</span>} hint="Kept as a `reasoning` field on GRPO export" />
     </div>
   )
 }
 
 export function SystemPromptPanel({ cfg, onChange }: { cfg: ResponsesConfig; onChange: Set }) {
   return (
-    <Panel title="System prompt" kana="指示">
+    <Panel title="System prompt">
       <div className="flex flex-col gap-3">
         <Textarea value={cfg.system_prompt} onChange={(e) => onChange({ system_prompt: e.target.value })} className="!min-h-[96px]" />
         <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
@@ -60,7 +60,7 @@ export function SystemPromptPanel({ cfg, onChange }: { cfg: ResponsesConfig; onC
 
 export function MultiTurnPanel({ cfg, onChange }: { cfg: ResponsesConfig; onChange: Set }) {
   return (
-    <Panel title="Multi-turn" kana="対話" actions={<Toggle size="sm" checked={cfg.multi_turn} onChange={(multi_turn) => onChange({ multi_turn })} />}>
+    <Panel title="Multi-turn" actions={<Toggle size="sm" checked={cfg.multi_turn} onChange={(multi_turn) => onChange({ multi_turn })} />}>
       <div className={cfg.multi_turn ? 'flex flex-col gap-3' : 'flex flex-col gap-3 opacity-40 pointer-events-none'}>
         <ModelPicker label="simulated user model" value={cfg.simulated_user_model} onChange={(simulated_user_model) => onChange({ simulated_user_model })} compact />
         <div className="grid grid-cols-3 gap-3">

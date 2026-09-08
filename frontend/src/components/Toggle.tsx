@@ -1,11 +1,11 @@
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 
-interface Props { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; hint?: ReactNode; disabled?: boolean; className?: string; size?: 'sm' | 'md'; tone?: 'cyan' | 'acid' | 'amber' }
+interface Props { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; hint?: ReactNode; disabled?: boolean; className?: string; size?: 'sm' | 'md'; tone?: 'orange' | 'ok' | 'amber' }
 
-const TONE = { cyan: 'bg-cyan shadow-glow', acid: 'bg-acid shadow-[0_0_14px_rgba(182,255,46,.5)]', amber: 'bg-amber shadow-[0_0_14px_rgba(255,176,32,.5)]' }
+const TONE = { orange: 'bg-orange shadow-glow', ok: 'bg-ok shadow-[0_0_14px_rgba(245,245,245,.5)]', amber: 'bg-amber shadow-[0_0_14px_rgba(255,160,64,.5)]' }
 
-export function Toggle({ checked, onChange, label, hint, disabled, className, size = 'md', tone = 'cyan' }: Props) {
+export function Toggle({ checked, onChange, label, hint, disabled, className, size = 'md', tone = 'orange' }: Props) {
   const w = size === 'md' ? 'w-10 h-[22px]' : 'w-8 h-[18px]'
   const knob = size === 'md' ? 'w-4 h-4' : 'w-3 h-3'
   const shift = size === 'md' ? 'translate-x-[20px]' : 'translate-x-[15px]'

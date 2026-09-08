@@ -36,7 +36,7 @@ export function NewProjectModal({ open, onClose }: { open: boolean; onClose: () 
   const toggleType = (k: DataType) => setTypes((t) => (t.includes(k) ? t.filter((x) => x !== k) : [...t, k]))
 
   return (
-    <Modal open={open} onClose={onClose} title="New project" kana="新規" width="lg"
+    <Modal open={open} onClose={onClose} title="New project" width="lg"
       footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" icon="sparkle" disabled={!valid} loading={create.isPending} onClick={submit} data-testid="create-project">Create project</Button></>}
     >
       <div className="grid grid-cols-[1fr_280px] gap-5">
@@ -50,9 +50,9 @@ export function NewProjectModal({ open, onClose }: { open: boolean; onClose: () 
               {DATA_TYPES.map((d) => {
                 const on = types.includes(d.key)
                 return (
-                  <button key={d.key} type="button" onClick={() => toggleType(d.key)} className={clsx('flex items-center justify-between px-3 h-10 rounded-btn border text-left transition-colors focus-ring', on ? 'border-cyan/60 bg-cyan/10' : 'border-line hover:border-line2')}>
-                    <span className="flex flex-col leading-tight"><span className={clsx('font-display font-bold uppercase text-[12px] tracking-[.06em]', on ? 'text-cyan' : 'text-text')}>{d.label}</span><span className="font-mono text-[10px] text-dim">{d.hint}</span></span>
-                    <span className={clsx('w-3.5 h-3.5 rounded-[3px] border', on ? 'bg-cyan border-cyan' : 'border-line2')} />
+                  <button key={d.key} type="button" onClick={() => toggleType(d.key)} className={clsx('flex items-center justify-between px-3 h-10 rounded-btn border text-left transition-colors focus-ring', on ? 'border-orange/60 bg-orange/10' : 'border-line hover:border-line2')}>
+                    <span className="flex flex-col leading-tight"><span className={clsx('font-display font-bold uppercase text-[12px] tracking-[.06em]', on ? 'text-orange' : 'text-text')}>{d.label}</span><span className="font-mono text-[10px] text-dim">{d.hint}</span></span>
+                    <span className={clsx('w-3.5 h-3.5 rounded-[3px] border', on ? 'bg-orange border-orange' : 'border-line2')} />
                   </button>
                 )
               })}
@@ -66,10 +66,10 @@ export function NewProjectModal({ open, onClose }: { open: boolean; onClose: () 
           {presets.data?.map((p) => {
             const on = p.id === preset
             return (
-              <button key={p.id} type="button" onClick={() => setPreset(p.id)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring', on ? 'border-cyan/60 bg-cyan/10 shadow-[0_0_18px_rgba(0,240,255,.08)]' : 'border-line hover:border-line2')}>
-                <div className={clsx('font-display font-bold uppercase text-[12.5px] tracking-[.05em]', on && 'text-cyan')}>{p.name}</div>
+              <button key={p.id} type="button" onClick={() => setPreset(p.id)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring', on ? 'border-orange/60 bg-orange/10 shadow-[0_0_18px_rgba(255,106,26,.08)]' : 'border-line hover:border-line2')}>
+                <div className={clsx('font-display font-bold uppercase text-[12.5px] tracking-[.05em]', on && 'text-orange')}>{p.name}</div>
                 <div className="text-[12px] text-muted leading-snug mt-1">{p.description}</div>
-                <div className="flex gap-1 mt-2">{p.data_types.map((t) => <Chip key={t} tone={on ? 'cyan' : 'dim'}>{t}</Chip>)}</div>
+                <div className="flex gap-1 mt-2">{p.data_types.map((t) => <Chip key={t} tone={on ? 'orange' : 'dim'}>{t}</Chip>)}</div>
               </button>
             )
           })}

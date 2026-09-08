@@ -26,7 +26,7 @@ export function FilterScreen() {
 
   const config = draft ? (
     <>
-      <Panel title="Rules" kana="規則" actions={<span className="font-mono text-[10px] text-dim">toggle = instant recount</span>}>
+      <Panel title="Rules" actions={<span className="font-mono text-[10px] text-dim">toggle = instant recount</span>}>
         <div className="flex flex-col gap-3">
           {RULE_KEYS.map((k) => (
             <div key={k} className="flex items-center justify-between gap-3">
@@ -36,7 +36,7 @@ export function FilterScreen() {
           ))}
         </div>
       </Panel>
-      <Panel title="Parameters" kana="設定">
+      <Panel title="Parameters">
         <div className="flex flex-col gap-4">
           <Slider label="near-dup cosine" value={draft.near_dup_threshold} min={0.8} max={0.99} step={0.005} format={(v) => v.toFixed(3)} tone="amber" onChange={(near_dup_threshold) => setDraft({ near_dup_threshold })} />
           <div className="grid grid-cols-2 gap-3">
@@ -49,7 +49,7 @@ export function FilterScreen() {
       </Panel>
       {s && (
         <div className="grid grid-cols-3 gap-2">
-          <StatTile size="sm" label="kept" value={s.kept} tone="acid" />
+          <StatTile size="sm" label="kept" value={s.kept} tone="ok" />
           <StatTile size="sm" label="removed" value={s.removed.length} tone="red" />
           <StatTile size="sm" label="refusals" value={s.refusals.length} tone="amber" />
         </div>
@@ -58,7 +58,7 @@ export function FilterScreen() {
   ) : <Spinner />
 
   const results = summary.isLoading ? <Spinner /> : !s ? null : s.removed.length + s.refusals.length === 0 ? (
-    <EmptyState title="Nothing filtered yet" kana="未濾過" body="Run the filters to compute removals. Every removal keeps a reason and can be restored." />
+    <EmptyState title="Nothing filtered yet" body="Run the filters to compute removals. Every removal keeps a reason and can be restored." />
   ) : (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">

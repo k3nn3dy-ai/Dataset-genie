@@ -27,7 +27,7 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
   const pctAfter = cap > 0 ? (after / cap) * 100 : 0
   const over = estimate?.over_cap || after > cap
   return (
-    <Modal open={open} onClose={onClose} title={`Estimate · ${stageTitle}`} kana="見積" width="md" tone={over ? 'amber' : 'default'}
+    <Modal open={open} onClose={onClose} title={`Estimate · ${stageTitle}`} width="md" tone={over ? 'amber' : 'default'}
       footer={(
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -37,9 +37,9 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
       )}
     >
       {runError && (
-        <Banner tone={runError.kind === 'nothing' ? 'cyan' : runError.kind === 'overcap' || runError.kind === 'conflict' ? 'amber' : 'red'} className="mb-4">
-          {runError.kind === 'nokey' ? <>No OpenRouter API key is set. {onSettings && <button type="button" className="underline text-cyan" onClick={onSettings}>Set your key in Settings</button>} and try again.</>
-            : runError.kind === 'conflict' ? <>A run is already in progress for this project{runError.stage ? ` (stage ${String(runError.stage).padStart(2, '0')})` : ''} — {runError.stage && onOpenStage ? <button type="button" className="underline text-cyan" onClick={() => onOpenStage(runError.stage!, runError.runId)} data-testid="open-running-stage">open it</button> : 'wait for it to finish'}.</>
+        <Banner tone={runError.kind === 'nothing' ? 'orange' : runError.kind === 'overcap' || runError.kind === 'conflict' ? 'amber' : 'red'} className="mb-4">
+          {runError.kind === 'nokey' ? <>No OpenRouter API key is set. {onSettings && <button type="button" className="underline text-orange" onClick={onSettings}>Set your key in Settings</button>} and try again.</>
+            : runError.kind === 'conflict' ? <>A run is already in progress for this project{runError.stage ? ` (stage ${String(runError.stage).padStart(2, '0')})` : ''} — {runError.stage && onOpenStage ? <button type="button" className="underline text-orange" onClick={() => onOpenStage(runError.stage!, runError.runId)} data-testid="open-running-stage">open it</button> : 'wait for it to finish'}.</>
             : runError.kind === 'overcap' ? <>The server refused: this run would exceed the budget cap ({runError.message}). You can force it — the cap is still enforced per call.</>
             : runError.message}
         </Banner>
@@ -49,7 +49,7 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
       {estimate && !loading && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-2">
-            <StatTile label="estimated cost" value={usd(estimate.est_usd)} tone={over ? 'amber' : 'cyan'} />
+            <StatTile label="estimated cost" value={usd(estimate.est_usd)} tone={over ? 'amber' : 'orange'} />
             <StatTile label="model calls" value={num(estimate.calls)} />
             <StatTile label="tokens in / out" value={`${Math.round(estimate.est_tokens_in / 1000)}k`} unit={`/ ${Math.round(estimate.est_tokens_out / 1000)}k`} size="sm" />
           </div>
@@ -57,13 +57,13 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
             <div className="flex justify-between label"><span>budget after run</span><span className={over ? 'text-amber' : 'text-text'}>{usd(after)} / {usd(cap)}</span></div>
             <div className="h-2 rounded-full bg-bg/70 border border-line overflow-hidden relative">
               <div className="absolute inset-y-0 left-0 bg-dim/60" style={{ width: `${Math.min(100, (spend / cap) * 100)}%` }} />
-              <div className={over ? 'absolute inset-y-0 bg-amber' : 'absolute inset-y-0 bg-cyan'} style={{ left: `${Math.min(100, (spend / cap) * 100)}%`, width: `${Math.min(100 - (spend / cap) * 100, ((estimate.est_usd) / cap) * 100)}%` }} />
+              <div className={over ? 'absolute inset-y-0 bg-amber' : 'absolute inset-y-0 bg-orange'} style={{ left: `${Math.min(100, (spend / cap) * 100)}%`, width: `${Math.min(100 - (spend / cap) * 100, ((estimate.est_usd) / cap) * 100)}%` }} />
             </div>
             <div className="font-mono text-[10.5px] text-dim">current {usd(spend)} · est +{usd(estimate.est_usd)} · {pctAfter.toFixed(0)}% of cap</div>
           </div>
           {over
             ? <Banner tone="amber">This run would exceed the project cap. Raise the cap in Settings or reduce scope. The server enforces the cap regardless.</Banner>
-            : <Banner tone="cyan" icon="lock">Cap is enforced server-side; the run auto-stops at {Math.round(90)}% of the cap. Actual usage is billed from provider usage, not this estimate.</Banner>}
+            : <Banner tone="orange" icon="lock">Cap is enforced server-side; the run auto-stops at {Math.round(90)}% of the cap. Actual usage is billed from provider usage, not this estimate.</Banner>}
         </div>
       )}
     </Modal>

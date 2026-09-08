@@ -16,8 +16,6 @@ export function Layout() {
       <div className="relative z-10 flex min-h-screen">
         <Rail />
         <main className="relative flex-1 min-w-0">
-          {/* Hazard stripe along the top of the main column */}
-          <div aria-hidden className="hazard h-[5px] w-full opacity-80 sticky top-0 z-30" />
           {/* Lattice backdrop, fixed to the main column, masked under the title */}
           <Lattice className="fixed top-0 bottom-0 left-[236px] right-0 z-0 pointer-events-none opacity-90" />
           <div className="relative z-10 px-8 pt-6 pb-16 max-w-[1560px]">

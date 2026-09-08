@@ -4,8 +4,8 @@ import { Textarea } from '../../components'
 
 const ROLE: Record<Message['role'], { label: string; cls: string; bubble: string }> = {
   system: { label: 'system', cls: 'text-dim', bubble: 'border-line bg-bg/40 text-muted' },
-  user: { label: 'user', cls: 'text-magenta', bubble: 'border-magenta/35 bg-magenta/5' },
-  assistant: { label: 'assistant', cls: 'text-cyan', bubble: 'border-cyan/35 bg-cyan/5' },
+  user: { label: 'user', cls: 'text-steel', bubble: 'border-steel/35 bg-steel/5' },
+  assistant: { label: 'assistant', cls: 'text-orange', bubble: 'border-orange/35 bg-orange/5' },
   tool: { label: 'tool', cls: 'text-amber', bubble: 'border-amber/35 bg-bg/60 font-mono text-[11.5px]' },
 }
 
