@@ -11,7 +11,8 @@ import { usd } from '../../lib/format'
 export function RejectedScreen() {
   const { projectId } = useParams()
   const { draft, setDraft, loading, projectError, refetch, project } = useConfigSection(projectId, 'preferences')
-  const rows = useRows(projectId, { status: 'accepted', page_size: 2000 })
+  // Mirrors backend preferences.ELIGIBLE_STATUSES: stage 03 writes rows as `draft`; `accepted` is only set by an explicit review action.
+  const rows = useRows(projectId, { status: 'draft,accepted,edited', page_size: 2000 })
   const pairs = usePairs(projectId)
   const [active, setActive] = useState<Pair | null>(null)
   const eligible = rows.data?.total ?? 0
@@ -19,7 +20,7 @@ export function RejectedScreen() {
   const current = active ?? items[0] ?? null
   const flawTotal = draft?.flaws.reduce((a, f) => a + f.weight, 0) ?? 0
   const estCost = useMemo(() => eligible * (draft?.strategy === 'weaker' ? 0.0012 : 0.0085), [eligible, draft?.strategy])
-  const blocked = rows.data && eligible === 0 ? { title: 'No accepted rows', body: 'Rejected responses are manufactured from accepted rows. Run stage 03 first.', stage: 3 as const } : null
+  const blocked = rows.data && eligible === 0 ? { title: 'No eligible rows', body: 'Rejected responses are manufactured from generated rows. Run stage 03 first.', stage: 3 as const } : null
   const notDpo = project && !project.data_types.includes('dpo')
 
   const config = draft ? (
@@ -50,7 +51,7 @@ export function RejectedScreen() {
         </div>
       </Panel>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="eligible pairs" value={eligible} tone="cyan" hint="accepted rows" />
+        <StatTile label="eligible pairs" value={eligible} tone="cyan" hint="eligible rows" />
         <StatTile label="est. cost" value={usd(estCost)} tone="magenta" hint={`${draft.strategy} · ${eligible} calls`} />
       </div>
     </>

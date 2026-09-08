@@ -57,7 +57,7 @@ let secrets: SecretsStatus = { openrouter: true, huggingface: true, hf_user: 'k3
 
 function filterRows(rows: RowItem[], q: RowQuery): RowItem[] {
   return rows.filter((r) => {
-    if (q.status && q.status !== 'all' && r.status !== q.status) return false
+    if (q.status && q.status !== 'all' && !q.status.split(',').includes(r.status)) return false
     if (q.leaf && r.metadata.leaf_id !== q.leaf) return false
     if (q.min_score !== undefined && (r.metadata.judge?.score ?? 0) < q.min_score) return false
     if (q.flags && q.flags.length && !q.flags.every((f) => r.metadata.flags.includes(f))) return false
