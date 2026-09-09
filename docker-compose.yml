@@ -1,0 +1,26 @@
+# Dataset Genie in Docker. Start with scripts/docker-start.sh (Mac/Linux) or
+# scripts\docker-start.ps1 (Windows), or plainly: docker compose up -d --build
+#
+# - The app is on http://localhost:8765 (change with GENIE_PORT=9000 in .env or the shell).
+# - The database and the secrets file live in the named volume `genie-data` and survive rebuilds.
+# - Exports are bind-mounted to ./exports so bundles show up next to this file on the host.
+# - API tokens: put them in .env (see .env.example) or enter them in the Settings screen.
+services:
+  genie:
+    build: .
+    image: dataset-genie:local
+    container_name: dataset-genie
+    ports:
+      - "${GENIE_PORT:-8765}:8765"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GENIE_APP_REFERER: "http://localhost:${GENIE_PORT:-8765}"
+    volumes:
+      - genie-data:/data
+      - ./exports:/data/exports
+    restart: unless-stopped
+
+volumes:
+  genie-data:

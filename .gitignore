@@ -11,3 +11,6 @@ exports/
 *.db-shm
 .DS_Store
 docs/screenshots/*.tmp.png
+
+# local env for docker compose (copy of .env.example with real tokens)
+.env

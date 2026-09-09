@@ -1,4 +1,4 @@
-.PHONY: dev backend frontend build test test-py test-fe lint screenshots seed-demo install start stop status
+.PHONY: dev backend frontend build test test-py test-fe lint screenshots seed-demo install start stop status docker-start docker-stop
 
 PY := uv run --no-sync
 
@@ -53,3 +53,9 @@ stop: ## stop whatever scripts/start.sh or make dev left running
 
 status:
 	@curl -sf http://localhost:8765/api/health && echo "  running on :8765" || echo "not running"
+
+docker-start: ## build + run in Docker on :8765 (scripts/docker-start.sh; Windows: scripts\docker-start.ps1)
+	@scripts/docker-start.sh
+
+docker-stop: ## stop the Docker container (data kept; scripts/docker-stop.sh --reset wipes it)
+	@scripts/docker-stop.sh

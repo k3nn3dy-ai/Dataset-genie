@@ -31,8 +31,9 @@ All captures are of the seeded demo project against the real backend. Regenerate
 
 ## Quickstart
 
-Requirements: macOS, Python 3.11 (via [`uv`](https://docs.astral.sh/uv/)), Node ≥ 20, an
+Requirements (native): macOS, Python 3.11 (via [`uv`](https://docs.astral.sh/uv/)), Node ≥ 20, an
 [OpenRouter](https://openrouter.ai/) API key. Optional: a Hugging Face token for publishing.
+On Windows, or to skip the toolchain entirely, see [Run with Docker](#run-with-docker-mac-windows-linux).
 
 ```bash
 make install          # uv venv + `uv pip install -e ".[dev]"` + npm install
@@ -66,6 +67,32 @@ scripts/start.sh --dev   # backend with hot reload on :8765 + Vite on :5173
 ```
 
 Logs go to `~/.dataset-genie/genie.log`; the process id is in `~/.dataset-genie/genie.pid`.
+
+### Run with Docker (Mac, Windows, Linux)
+
+No Python or Node needed, only [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+The scripts check Docker is running, create `.env` from `.env.example` on first run, build the
+image, start it, wait for the health check and open the browser.
+
+```bash
+scripts/docker-start.sh          # Mac / Linux            (or: make docker-start)
+scripts/docker-stop.sh           # stop; --reset also wipes the database and tokens
+```
+
+```powershell
+.\scripts\docker-start.ps1       # Windows PowerShell     (or double-click scripts\docker-start.cmd)
+.\scripts\docker-stop.ps1        # stop; -Reset also wipes the database and tokens
+```
+
+- The app is on http://localhost:8765 (`GENIE_PORT=9000` in `.env` to change it).
+- Tokens: put `OPENROUTER_API_KEY` / `HF_TOKEN` in `.env`, or paste them into **Settings** as
+  usual. There is no OS keychain inside the container, so Settings-entered tokens go to an
+  owner-only `secrets.json` in the data volume instead.
+- The database lives in the `genie-data` Docker volume and survives rebuilds; exports are
+  bind-mounted to `./exports/` so bundles appear next to the repo. Paths shown in the UI such as
+  `/data/exports/<slug>/...` are `./exports/<slug>/...` on your machine.
+- Under the hood it is `docker compose up -d --build` with the `Dockerfile` and
+  `docker-compose.yml` in the repo root.
 
 ## The pipeline, stage by stage
 
@@ -234,10 +261,13 @@ checked with `whoami()`.
 
 ## Security
 
-- Secrets (OpenRouter key, HF token) live only in the macOS keychain under the service
-  `dataset-genie`. They are never written to the database, YAML, dataset cards, logs or exports —
-  the integration test greps every artefact for key-shaped strings.
-- The app binds to localhost and has no auth; it is a single-user local tool.
+- Secrets (OpenRouter key, HF token) live in the OS keychain under the service `dataset-genie`.
+  They are never written to the database, YAML, dataset cards, logs or exports — the integration
+  test greps every artefact for key-shaped strings. Where no keychain exists (Docker, headless
+  Linux) they go to an owner-only `secrets.json` in `GENIE_HOME`; `OPENROUTER_API_KEY` /
+  `HF_TOKEN` environment variables take precedence over both.
+- The app binds to localhost and has no auth; it is a single-user local tool. The Docker image
+  binds to `0.0.0.0` inside the container, but compose publishes the port on localhost only.
 - Raw model calls are stored locally for transparency — delete a project to delete its calls.
 
 ## CLI
@@ -266,6 +296,9 @@ genie secrets status                              which tokens are configured (n
 | Same-family warning on Judge | Choose a judge from a different provider family than the teacher |
 | Export fails template validation | Read the first 10 offending ids in the error; fix in Review (edits are re-validated) |
 | `keyring` errors on a headless Mac | Unlock the login keychain, or run the app from a logged-in session |
+| Docker: `Docker is installed but not running` | Start Docker Desktop and wait for the whale icon to settle, then rerun the start script |
+| Docker: port 8765 already in use | `make stop` if the native app is running, or set `GENIE_PORT=9000` in `.env` |
+| Docker on Linux: export fails with permission denied | The container runs as uid 10001; `chmod o+w exports` or `chown 10001 exports` |
 | `make screenshots` says backend unavailable | It falls back to the UI's `?mock=1` data; run `make seed-demo && make dev` first for real data |
 
 ## Project layout

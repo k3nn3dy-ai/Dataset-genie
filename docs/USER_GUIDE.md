@@ -43,7 +43,21 @@ redoing the stages before it. The left rail shows where you are; a tick means th
 
 ## 2. Before you start (five minutes)
 
-1. **Install and start**
+1. **Install and start.** Two ways; pick one.
+
+   *With Docker (Mac or Windows, nothing else to install):* install
+   [Docker Desktop](https://www.docker.com/products/docker-desktop/), start it, then run
+
+   ```
+   scripts/docker-start.sh        # Mac
+   .\scripts\docker-start.ps1     # Windows PowerShell (or double-click scripts\docker-start.cmd)
+   ```
+
+   The first run builds the app (a few minutes); it then opens http://localhost:8765. Stop it
+   with `scripts/docker-stop.sh` or `.\scripts\docker-stop.ps1`. Exported datasets appear in the
+   `exports` folder inside the repo.
+
+   *Natively on a Mac (needs Python 3.11 via uv and Node 20+):*
 
    ```
    make install
@@ -53,8 +67,10 @@ redoing the stages before it. The left rail shows where you are; a tick means th
    `make stop` shuts it down later.
 
 2. **Add your OpenRouter key.** Open **Settings** (bottom of the rail), paste the key into
-   *OpenRouter API key* and press **Set**. The pill turns green. The key is stored in the macOS
-   keychain only; it is never written to the database or to any exported file.
+   *OpenRouter API key* and press **Set**. The pill turns green. The key is stored in the OS keychain
+   (or, in Docker, an owner-only file inside the app's data volume); it is never written to the
+   database or to any exported file. Docker users can also put it in `.env` as
+   `OPENROUTER_API_KEY=...` before starting.
 
 3. **Leave the rest of Settings alone for now.** The defaults are sensible: Claude Sonnet writes
    answers, GPT-4o-mini writes questions, GPT-4o judges, a $15 cap per project, auto-stop at 90 %.
