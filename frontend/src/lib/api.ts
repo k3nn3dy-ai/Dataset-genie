@@ -9,11 +9,36 @@ export class ApiError extends Error {
   /** True when the body was the backend's own `{detail}` JSON — i.e. the app answered, not a proxy in front of it. */
   fromBackend: boolean
   constructor(status: number, detail: unknown, fromBackend = false) {
-    super(typeof detail === 'string' ? detail : `API error ${status}`)
+    super(describeDetail(status, detail))
     this.status = status
     this.detail = detail
     this.fromBackend = fromBackend
   }
+}
+
+/**
+ * Human-readable message for a backend `detail`. FastAPI sends a string for plain errors; our
+ * export endpoint sends `{message, total, issues: [{id, reason}]}` for validation failures, so
+ * surface the message plus the first few issues instead of a bare "API error 422".
+ */
+function describeDetail(status: number, detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (detail && typeof detail === 'object') {
+    const d = detail as { message?: unknown; total?: unknown; issues?: unknown }
+    const parts: string[] = []
+    if (typeof d.message === 'string') parts.push(d.message)
+    if (Array.isArray(d.issues) && d.issues.length) {
+      const shown = d.issues.slice(0, 3).map((i) => {
+        const it = i as { id?: unknown; reason?: unknown }
+        return typeof it.id === 'string' && typeof it.reason === 'string' ? `${it.id}: ${it.reason}` : JSON.stringify(i)
+      })
+      const total = typeof d.total === 'number' ? d.total : d.issues.length
+      const more = total > shown.length ? ` (+${total - shown.length} more)` : ''
+      parts.push(`${total} issue(s): ${shown.join('; ')}${more}`)
+    }
+    if (parts.length) return parts.join(' — ')
+  }
+  return `API error ${status}`
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
