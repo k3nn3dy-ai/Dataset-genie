@@ -315,7 +315,7 @@ backend/genie/
 frontend/      Vite + React + TypeScript + Tailwind (lofi-cyberpunk shell, 10 screens)
 tests/         pytest: golden JSONL fixtures, FakeOpenRouter, integration + adversarial runner tests
 scripts/       seed_demo.py, screenshots.ts
-docs/          design spec, plan, screenshots
+docs/          user guide, screenshots
 ```
 
 Data lives in `$GENIE_HOME` (default `~/.dataset-genie/`): `genie.db` (SQLite, WAL) and `exports/`.
@@ -328,5 +328,8 @@ make lint        # ruff + tsc
 uv run pytest -q tests/test_pipeline_integration.py    # full pipeline against FakeOpenRouter
 ```
 
-Design decisions and their reasons are logged in [DECISIONS.md](DECISIONS.md); the architecture spec is
-[docs/superpowers/specs/2026-09-07-dataset-genie-design.md](docs/superpowers/specs/2026-09-07-dataset-genie-design.md).
+The plain-language walkthrough is in [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
