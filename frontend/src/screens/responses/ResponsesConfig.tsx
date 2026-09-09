@@ -26,7 +26,7 @@ export function EnsembleEditor({ cfg, onChange }: { cfg: ResponsesConfig; onChan
         </div>
       ))}
       {adding ? (
-        <div className="rounded-btn border border-orange/40 p-2.5 flex flex-col gap-2">
+        <div className="rounded-btn border border-green/40 p-2.5 flex flex-col gap-2">
           <ModelPicker label="add teacher" value={pending} onChange={setPending} compact />
           <div className="flex gap-2 justify-end"><Button size="sm" onClick={() => setAdding(false)}>Cancel</Button><Button size="sm" variant="primary" icon="plus" onClick={() => { onChange({ ensemble: [...cfg.ensemble, pending] }); setAdding(false); setPending(newSlot()) }}>Add</Button></div>
         </div>
@@ -35,7 +35,7 @@ export function EnsembleEditor({ cfg, onChange }: { cfg: ResponsesConfig; onChan
         <Slider label="temperature" value={cfg.temperature} min={0} max={2} step={0.05} format={(v) => v.toFixed(2)} onChange={(temperature) => onChange({ temperature })} />
         <Field label="max tokens"><NumberInput value={cfg.max_tokens} min={128} max={32000} step={128} onChange={(max_tokens) => onChange({ max_tokens })} /></Field>
       </div>
-      <Toggle checked={cfg.reasoning_tags} onChange={(reasoning_tags) => onChange({ reasoning_tags })} label={<span>Wrap reasoning in <span className="font-mono text-orange">&lt;think&gt;</span> tags</span>} hint="Kept as a `reasoning` field on GRPO export" />
+      <Toggle checked={cfg.reasoning_tags} onChange={(reasoning_tags) => onChange({ reasoning_tags })} label={<span>Wrap reasoning in <span className="font-mono text-green">&lt;think&gt;</span> tags</span>} hint="Kept as a `reasoning` field on GRPO export" />
     </div>
   )
 }

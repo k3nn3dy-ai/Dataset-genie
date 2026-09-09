@@ -34,7 +34,7 @@ export function ResponsesScreen() {
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="responses" value={items.length} tone="orange" />
+        <StatTile size="sm" label="responses" value={items.length} tone="green" />
         <StatTile size="sm" label="refusals" value={refusals} tone={refusals > 0 ? 'amber' : 'default'} hint={`${((refusals / items.length) * 100).toFixed(1)}%`} />
         <StatTile size="sm" label="multi-turn" value={multiTurn} hint={`${((multiTurn / items.length) * 100).toFixed(0)}% of rows`} />
         <StatTile size="sm" label="models" value={new Set(items.map((r) => r.metadata.models.responses)).size} />

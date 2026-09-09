@@ -5,7 +5,7 @@ import { Textarea } from '../../components'
 const ROLE: Record<Message['role'], { label: string; cls: string; bubble: string }> = {
   system: { label: 'system', cls: 'text-dim', bubble: 'border-line bg-bg/40 text-muted' },
   user: { label: 'user', cls: 'text-steel', bubble: 'border-steel/35 bg-steel/5' },
-  assistant: { label: 'assistant', cls: 'text-orange', bubble: 'border-orange/35 bg-orange/5' },
+  assistant: { label: 'assistant', cls: 'text-green', bubble: 'border-green/35 bg-green/5' },
   tool: { label: 'tool', cls: 'text-amber', bubble: 'border-amber/35 bg-bg/60 font-mono text-[11.5px]' },
 }
 

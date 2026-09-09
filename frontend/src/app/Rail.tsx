@@ -25,7 +25,7 @@ export function Rail() {
     <aside className="w-[236px] shrink-0 sticky top-0 h-screen flex flex-col border-r border-line bg-surface1 backdrop-blur-md z-20">
       {/* Wordmark */}
       <NavLink to="/" className="flex items-center gap-3 px-4 h-[68px] border-b border-line">
-        <span className="w-9 h-9 rounded-[9px] border border-orange flex items-center justify-center text-orange shadow-glow bg-bg/60 shrink-0"><Icon name="sparkle" size={18} /></span>
+        <span className="w-9 h-9 rounded-[9px] border border-green flex items-center justify-center text-green shadow-glow bg-bg/60 shrink-0"><Icon name="sparkle" size={18} /></span>
         <span className="flex flex-col leading-none min-w-0">
           <span className="font-display font-bold uppercase text-[14px] tracking-[.06em] text-text">Dataset Genie</span>
         </span>
@@ -57,9 +57,9 @@ export function Rail() {
                 >
                   {({ isActive }) => (
                     <>
-                      {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-orange shadow-glow" />}
+                      {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-green shadow-glow" />}
                       <StageBadge n={s.n} state={isActive ? 'active' : st === 'done' || st === 'running' || st === 'paused' || st === 'failed' ? st : 'todo'} />
-                      <span className={clsx('font-ui font-semibold text-[14px] flex-1 truncate', isActive && 'text-orange')}>{s.title}</span>
+                      <span className={clsx('font-ui font-semibold text-[14px] flex-1 truncate', isActive && 'text-green')}>{s.title}</span>
                     </>
                   )}
                 </NavLink>
@@ -129,11 +129,11 @@ function RailExternal({ href, icon, label }: { href: string; icon: 'external'; l
 
 function RailLink({ to, icon, label, end }: { to: string; icon: 'folder' | 'settings'; label: string; end?: boolean }) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => clsx('relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors', isActive ? 'stage-active text-orange' : 'text-muted hover:text-text hover:bg-surface2/60')}>
+    <NavLink to={to} end={end} className={({ isActive }) => clsx('relative flex items-center gap-3 h-[38px] pl-4 pr-3 transition-colors', isActive ? 'stage-active text-green' : 'text-muted hover:text-text hover:bg-surface2/60')}>
       {({ isActive }) => (
         <>
-          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-orange shadow-glow" />}
-          <span className={clsx('w-6 h-6 rounded-[6px] border flex items-center justify-center', isActive ? 'border-orange/60 text-orange' : 'border-line2')}><Icon name={icon} size={13} /></span>
+          {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-green shadow-glow" />}
+          <span className={clsx('w-6 h-6 rounded-[6px] border flex items-center justify-center', isActive ? 'border-green/60 text-green' : 'border-line2')}><Icon name={icon} size={13} /></span>
           <span className="font-ui font-semibold text-[14px] flex-1">{label}</span>
         </>
       )}
@@ -145,8 +145,8 @@ function StageBadge({ n, state }: { n: number; state: 'done' | 'active' | 'todo'
   return (
     <span className={clsx(
       'w-6 h-6 rounded-[6px] flex items-center justify-center font-mono text-[11px] shrink-0 border',
-      state === 'active' && 'bg-orange text-bg border-orange shadow-glow font-bold',
-      state === 'done' && 'bg-bg/80 text-orange border-line2',
+      state === 'active' && 'bg-green text-bg border-green shadow-glow font-bold',
+      state === 'done' && 'bg-bg/80 text-green border-line2',
       state === 'running' && 'bg-bg/80 text-ok border-ok/60',
       state === 'paused' && 'bg-bg/80 text-amber border-amber/70 shadow-[0_0_10px_rgba(255,160,64,.35)]',
       state === 'failed' && 'bg-bg/80 text-red border-red/60',

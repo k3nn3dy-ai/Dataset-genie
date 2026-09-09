@@ -51,7 +51,7 @@ export function RejectedScreen() {
         </div>
       </Panel>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="eligible pairs" value={eligible} tone="orange" hint="eligible rows" />
+        <StatTile label="eligible pairs" value={eligible} tone="green" hint="eligible rows" />
         <StatTile label="est. cost" value={usd(estCost)} tone="steel" hint={`${draft.strategy} · ${eligible} calls`} />
       </div>
     </>
@@ -62,7 +62,7 @@ export function RejectedScreen() {
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="pairs" value={items.length} tone="orange" />
+        <StatTile size="sm" label="pairs" value={items.length} tone="green" />
         <StatTile size="sm" label="ties (judged)" value={items.filter((p) => p.metadata.judge?.verdict === 'tie').length} tone="steel" hint="excluded from DPO" />
         <StatTile size="sm" label="strategy" value={<span className="text-[15px]">{items[0]?.metadata.strategy}</span>} />
         <StatTile size="sm" label="flaws used" value={new Set(items.map((p) => p.metadata.flaw)).size} />

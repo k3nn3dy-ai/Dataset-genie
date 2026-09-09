@@ -38,7 +38,7 @@ export function SettingsScreen() {
               <div className="flex flex-col gap-4">
                 <SecretRow name="openrouter" label="OpenRouter API key" hint="sk-or-v1-…" />
                 <SecretRow name="huggingface" label="Hugging Face token" hint="hf_…" />
-                <Banner tone="orange" icon="lock">Stored in the macOS keychain under service <span className="font-mono">dataset-genie</span>. The UI only ever sees set / unset.</Banner>
+                <Banner tone="green" icon="lock">Stored in the macOS keychain under service <span className="font-mono">dataset-genie</span>. The UI only ever sees set / unset.</Banner>
               </div>
             </Panel>
             <Panel title="Budget defaults">

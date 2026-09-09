@@ -37,7 +37,7 @@ export function ReviewScreen() {
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search id, prompt, response…" />
           <div>
             <span className="label block mb-1.5">status</span>
-            <div className="flex flex-wrap gap-1">{STATUSES.map((s) => <Chip key={s} tone={status === s ? 'orange' : 'dim'} active={status === s} onClick={() => setStatus(s)}>{s}</Chip>)}</div>
+            <div className="flex flex-wrap gap-1">{STATUSES.map((s) => <Chip key={s} tone={status === s ? 'green' : 'dim'} active={status === s} onClick={() => setStatus(s)}>{s}</Chip>)}</div>
           </div>
           <Slider label="min score" value={minScore} min={0} max={5} step={0.1} format={(v) => (v === 0 ? 'any' : v.toFixed(1))} tone="amber" onChange={setMinScore} />
           <div>
@@ -51,7 +51,7 @@ export function ReviewScreen() {
         </div>
       </Panel>
       <div className="grid grid-cols-3 gap-2">
-        <StatTile size="sm" label="matching" value={items.length} tone="orange" />
+        <StatTile size="sm" label="matching" value={items.length} tone="green" />
         <StatTile size="sm" label="accepted" value={counts.accepted} tone="ok" />
         <StatTile size="sm" label="flagged" value={counts.flagged} tone="amber" hint={`${counts.low} low_score`} />
       </div>
@@ -63,8 +63,8 @@ export function ReviewScreen() {
   ) : (
     <div className="flex flex-col gap-2">
       {sel.size > 0 && (
-        <div className="panel !bg-surface2 flex items-center gap-2 px-3 h-10 border-orange/40">
-          <span className="font-mono text-[11px] text-orange">{sel.size} selected</span>
+        <div className="panel !bg-surface2 flex items-center gap-2 px-3 h-10 border-green/40">
+          <span className="font-mono text-[11px] text-green">{sel.size} selected</span>
           <span className="flex-1" />
           <Button size="sm" variant="primary" icon="check" loading={bulk.isPending} onClick={() => bulk.mutate({ ids: [...sel], action: 'accept' }, { onSuccess: () => setSel(new Set()) })}>Accept</Button>
           <Button size="sm" variant="outline" icon="flag" loading={bulk.isPending} onClick={() => bulk.mutate({ ids: [...sel], action: 'flag' }, { onSuccess: () => setSel(new Set()) })}>Flag</Button>

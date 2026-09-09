@@ -40,13 +40,13 @@ export function TaxonomyScreen() {
           <Toggle checked={draft.negative_branches} onChange={(v) => setDraft({ negative_branches: v })} label="Negative branches" hint="Out-of-scope subtopics the model should refuse" tone="amber" />
           <Field label="task types" hint="cycle on leaf chips">
             <div className="flex flex-wrap gap-1">{draft.task_types.map((t) => <Chip key={t} tone="default" onRemove={() => setDraft({ task_types: draft.task_types.filter((x) => x !== t) })}>{t}</Chip>)}
-              <button type="button" className="label hover:text-orange px-1" onClick={() => { const t = window.prompt('Task type (uppercase)'); if (t) setDraft({ task_types: [...draft.task_types, t.toUpperCase()] }) }}>+ add</button>
+              <button type="button" className="label hover:text-green px-1" onClick={() => { const t = window.prompt('Task type (uppercase)'); if (t) setDraft({ task_types: [...draft.task_types, t.toUpperCase()] }) }}>+ add</button>
             </div>
           </Field>
         </div>
       </Panel>
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="target rows" value={num(leaves * rowsPerLeaf)} tone="orange" hint={`${leaves} leaves × ${rowsPerLeaf}`} />
+        <StatTile label="target rows" value={num(leaves * rowsPerLeaf)} tone="green" hint={`${leaves} leaves × ${rowsPerLeaf}`} />
         <StatTile label="projected (config)" value={num(projected * rowsPerLeaf)} hint={`${projected} leaves from generator`} />
       </div>
     </>
@@ -59,7 +59,7 @@ export function TaxonomyScreen() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 font-mono text-[11px] text-muted">
-            <span><span className="text-steel">{tree.length}</span> topics</span><span><span className="text-orange">{leaves}</span> leaves</span><span><span className="text-amber">{negLeaves}</span> negative</span>
+            <span><span className="text-steel">{tree.length}</span> topics</span><span><span className="text-green">{leaves}</span> leaves</span><span><span className="text-amber">{negLeaves}</span> negative</span>
             {dirty && <Chip tone="amber">unsaved</Chip>}
           </div>
           <Button size="sm" variant={dirty ? 'primary' : 'ghost'} icon="check" disabled={!dirty} loading={put.isPending} onClick={save}>Save tree</Button>

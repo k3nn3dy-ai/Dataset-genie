@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss'
 
-// Design tokens — orange / black / grey / white palette. Add colours here, not inline.
+// Design tokens — green / black / grey / white palette. Add colours here, not inline.
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -14,8 +14,8 @@ export default {
         text: '#f0f0f0',
         muted: '#9a9a9a',
         dim: '#5c5c5c',
-        orange: '#ff6a1a',
-        orangeSoft: '#ff9a5c',
+        green: '#22e35a',
+        greenSoft: '#6ff59a',
         steel: '#b3b3b3',
         ok: '#f5f5f5',
         amber: '#ffa040',
@@ -28,7 +28,7 @@ export default {
         mono: ['"Share Tech Mono"', 'monospace'],
       },
       boxShadow: {
-        glow: '0 0 18px rgba(255,106,26,.55)',
+        glow: '0 0 18px rgba(34,227,90,.55)',
         glowSteel: '0 0 18px rgba(179,179,179,.45)',
       },
       letterSpacing: { label: '.14em' },

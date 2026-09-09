@@ -19,8 +19,8 @@ export function FormatCards({ selected, onChange, dataTypes }: { selected: Expor
         const on = selected.includes(f.key)
         const fits = f.key === 'alpaca' ? dataTypes.includes('sft') : dataTypes.includes(f.key)
         return (
-          <button key={f.key} type="button" onClick={() => toggle(f.key)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring flex flex-col gap-1', on ? 'border-orange/60 bg-orange/10 shadow-[0_0_18px_rgba(255,106,26,.08)]' : 'border-line hover:border-line2', !fits && 'opacity-60')}>
-            <div className="flex items-center justify-between"><span className={clsx('font-display font-bold uppercase text-[12.5px] tracking-[.05em]', on && 'text-orange')}>{f.label}</span><span className={clsx('w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center', on ? 'bg-orange border-orange text-bg' : 'border-line2')}>{on && <Icon name="check" size={10} strokeWidth={3} />}</span></div>
+          <button key={f.key} type="button" onClick={() => toggle(f.key)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring flex flex-col gap-1', on ? 'border-green/60 bg-green/10 shadow-[0_0_18px_rgba(34,227,90,.08)]' : 'border-line hover:border-line2', !fits && 'opacity-60')}>
+            <div className="flex items-center justify-between"><span className={clsx('font-display font-bold uppercase text-[12.5px] tracking-[.05em]', on && 'text-green')}>{f.label}</span><span className={clsx('w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center', on ? 'bg-green border-green text-bg' : 'border-line2')}>{on && <Icon name="check" size={10} strokeWidth={3} />}</span></div>
             <div className="font-mono text-[10px] text-muted">{f.trainer}</div>
             <div className="font-mono text-[10px] text-dim truncate">{f.shape}</div>
             {!fits && <div className="font-mono text-[9.5px] text-amber">not in project data types</div>}
@@ -37,7 +37,7 @@ export function BundleTree({ slug, formats }: { slug: string; formats: ExportFor
     <pre className="font-mono text-[11.5px] leading-[1.6] text-text/85">
       <span className="text-dim">~/.dataset-genie/exports/</span>{slug}/<span className="text-muted">{stamp}</span>/{'\n'}
       {formats.map((f, i) => (
-        <span key={f}>{'  '}<span className="text-orange">{f}</span>/{'\n'}{'    '}train.jsonl{'\n'}{'    '}eval.jsonl{i < formats.length - 1 ? '\n' : '\n'}</span>
+        <span key={f}>{'  '}<span className="text-green">{f}</span>/{'\n'}{'    '}train.jsonl{'\n'}{'    '}eval.jsonl{i < formats.length - 1 ? '\n' : '\n'}</span>
       ))}
       {'  '}<span className="text-steel">README.md</span>{'\n'}
       {'  '}<span className="text-steel">generation_config.yaml</span>{'\n'}

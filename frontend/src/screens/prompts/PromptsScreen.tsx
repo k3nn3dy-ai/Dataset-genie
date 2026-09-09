@@ -37,7 +37,7 @@ export function PromptsScreen() {
       <Panel title="Personas" actions={<span className="font-mono text-[10px] text-dim">weights sum {draft.personas.reduce((a, p) => a + p.weight, 0)}%</span>}>
         <PersonaEditor personas={draft.personas} onChange={(personas) => setDraft({ personas })} />
       </Panel>
-      <Panel title="Style mix" actions={<span className="font-mono text-[10px] text-orange">= 100%</span>}>
+      <Panel title="Style mix" actions={<span className="font-mono text-[10px] text-green">= 100%</span>}>
         <StyleMix mix={draft.style_mix} onChange={(style_mix) => setDraft({ style_mix })} />
       </Panel>
       <Panel title="Sampling">
@@ -57,22 +57,22 @@ export function PromptsScreen() {
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        <StatTile size="sm" label="prompts" value={num(items.length)} tone="orange" />
+        <StatTile size="sm" label="prompts" value={num(items.length)} tone="green" />
         <StatTile size="sm" label="leaves covered" value={`${new Set(items.map((p) => p.leaf_id)).size}`} unit={`/ ${leaves.length}`} />
         <StatTile size="sm" label="adversarial" value={adversarial} tone="steel" hint={`${((adversarial / Math.max(1, items.length)) * 100).toFixed(1)}%`} />
       </div>
       <div className="flex items-center gap-2">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search prompts…" className="!h-8 max-w-[260px]" />
         <div className="flex gap-1 flex-wrap flex-1">
-          <Chip tone={leafFilter ? 'dim' : 'orange'} onClick={() => setLeafFilter(null)}>all leaves</Chip>
-          {leafFilter && <Chip tone="orange" onRemove={() => setLeafFilter(null)}>{leaves.find((l) => l.id === leafFilter)?.label}</Chip>}
+          <Chip tone={leafFilter ? 'dim' : 'green'} onClick={() => setLeafFilter(null)}>all leaves</Chip>
+          {leafFilter && <Chip tone="green" onRemove={() => setLeafFilter(null)}>{leaves.find((l) => l.id === leafFilter)?.label}</Chip>}
         </div>
       </div>
       <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-1">
         {grouped.map(([leafId, ps]) => (
           <div key={leafId} className="rounded-card border border-line bg-bg/40">
             <div className="flex items-center justify-between px-3 h-9 border-b border-line">
-              <button type="button" onClick={() => setLeafFilter(leafId)} className="font-mono text-[11px] text-left truncate hover:text-orange"><span className="text-dim">{ps[0].leaf_path.slice(0, -1).join(' / ')} / </span><span className="text-text">{ps[0].leaf_path.at(-1)}</span></button>
+              <button type="button" onClick={() => setLeafFilter(leafId)} className="font-mono text-[11px] text-left truncate hover:text-green"><span className="text-dim">{ps[0].leaf_path.slice(0, -1).join(' / ')} / </span><span className="text-text">{ps[0].leaf_path.at(-1)}</span></button>
               <div className="flex items-center gap-2 shrink-0">
                 <Chip tone={toneFor(ps[0].difficulty)}>{ps[0].difficulty}</Chip>
                 <span className="font-mono text-[10px] text-dim">{ps.length}</span>

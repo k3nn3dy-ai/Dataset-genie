@@ -26,7 +26,7 @@ export function Kit() {
         </div>
       </Panel>
       <div className="grid grid-cols-4 gap-3">
-        <StatTile label="rows accepted" value="1,024" delta="+12%" deltaTone="ok" tone="orange" />
+        <StatTile label="rows accepted" value="1,024" delta="+12%" deltaTone="ok" tone="green" />
         <StatTile label="refusal rate" value="3.2" unit="%" tone="amber" hint="12 of 380" />
         <StatTile label="spend" value="$6.42" tone="steel" delta="43% cap" />
         <StatTile label="errors" value="0" tone="ok" />
@@ -40,7 +40,7 @@ export function Kit() {
             <Slider label="adversarial" value={v} onChange={setV} format={(x) => `${x}%`} />
             <Slider label="temperature" value={0.7} onChange={() => undefined} min={0} max={2} step={0.05} tone="steel" format={(x) => x.toFixed(2)} />
             <div className="flex flex-wrap gap-1.5">
-              <Chip>default</Chip><Chip tone="orange">edited</Chip><Chip tone="steel">near_dup</Chip><Chip tone="ok">accepted</Chip><Chip tone="amber">refusal</Chip><Chip tone="red">low_score</Chip><Chip tone="dim">todo</Chip><Chip tone="orange" onRemove={() => undefined}>removable</Chip><Chip tone="default" onClick={() => undefined} active>clickable</Chip>
+              <Chip>default</Chip><Chip tone="green">edited</Chip><Chip tone="steel">near_dup</Chip><Chip tone="ok">accepted</Chip><Chip tone="amber">refusal</Chip><Chip tone="red">low_score</Chip><Chip tone="dim">todo</Chip><Chip tone="green" onRemove={() => undefined}>removable</Chip><Chip tone="default" onClick={() => undefined} active>clickable</Chip>
             </div>
             <div className="flex gap-3 items-center"><Segmented options={[{ key: 'private', label: 'Private' }, { key: 'public', label: 'Public' }]} value={seg} onChange={setSeg} /><Spinner /></div>
             <RadioGroup value={radio} onChange={setRadio} options={[{ key: 'corruptor', label: 'Corruptor', hint: 'Same teacher injects one flaw' }, { key: 'weaker', label: 'Weaker model', hint: 'A cheaper model answers' }]} />
@@ -65,7 +65,7 @@ export function Kit() {
       <Panel title="MonoTable" actions={<Button size="sm" variant="outline" icon="filter">Filter</Button>}>
         <MonoTable rows={ROWS} rowKey={(r) => r.id} selectable selected={sel} onSelectedChange={setSel} onRowClick={() => undefined} activeKey={ROWS[1].id}
           columns={[
-            { key: 'id', header: 'id', render: (r) => <span className="text-orange">{r.id}</span>, sortValue: (r) => r.id },
+            { key: 'id', header: 'id', render: (r) => <span className="text-green">{r.id}</span>, sortValue: (r) => r.id },
             { key: 'leaf', header: 'leaf', render: (r) => r.leaf },
             { key: 'score', header: 'score', align: 'right', render: (r) => r.score.toFixed(1), sortValue: (r) => r.score },
             { key: 'flags', header: 'flags', render: (r) => <div className="flex gap-1">{r.flags.map((f) => <Chip key={f} tone="red">{f}</Chip>)}</div> },
@@ -75,7 +75,7 @@ export function Kit() {
         <Panel title="Histogram"><Histogram bins={[1, 2, 4, 6, 9, 14, 22, 31, 18, 7]} threshold={3} mean={3.72} /></Panel>
         <Panel title="Icons">
           <div className="grid grid-cols-8 gap-2">
-            {ICON_NAMES.map((n) => <div key={n} className="flex flex-col items-center gap-1 py-2 rounded-btn border border-line text-muted"><Icon name={n} size={16} className="text-orange" /><span className="font-mono text-[9px]">{n}</span></div>)}
+            {ICON_NAMES.map((n) => <div key={n} className="flex flex-col items-center gap-1 py-2 rounded-btn border border-line text-muted"><Icon name={n} size={16} className="text-green" /><span className="font-mono text-[9px]">{n}</span></div>)}
           </div>
         </Panel>
       </div>
@@ -83,7 +83,7 @@ export function Kit() {
         <EmptyState title="No project selected" body="Pick a project from the list, or create one to start the pipeline." action={{ label: 'New project', onClick: () => setModal(true), icon: 'plus' }} />
         <ErrorState error={new Error('ApiError 500: taxonomy generation failed — provider timeout after 60s')} onRetry={() => undefined} />
       </div>
-      <div className="flex flex-col gap-2"><Banner tone="amber">Judge model shares a family with the teacher.</Banner><Banner tone="orange" icon="lock">Cap is enforced server-side.</Banner><Banner tone="red">Export aborted: validation failed.</Banner><Banner tone="ok" icon="check">Pushed to Hub.</Banner></div>
+      <div className="flex flex-col gap-2"><Banner tone="amber">Judge model shares a family with the teacher.</Banner><Banner tone="green" icon="lock">Cap is enforced server-side.</Banner><Banner tone="red">Export aborted: validation failed.</Banner><Banner tone="ok" icon="check">Pushed to Hub.</Banner></div>
       <Modal open={modal} onClose={() => setModal(false)} title="Modal" footer={<><Button onClick={() => setModal(false)}>Cancel</Button><Button variant="primary" icon="check" onClick={() => setModal(false)}>Confirm</Button></>}>
         <p className="text-muted">Modal body content.</p>
       </Modal>

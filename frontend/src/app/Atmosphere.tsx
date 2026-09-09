@@ -11,7 +11,7 @@ export function Atmosphere() {
     <>
       {/* Behind content */}
       <div aria-hidden className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,106,26,.16) 0%, rgba(255,106,26,.05) 35%, transparent 65%)' }} />
+        <div className="absolute -top-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full" style={{ background: 'radial-gradient(circle, rgba(34,227,90,.16) 0%, rgba(34,227,90,.05) 35%, transparent 65%)' }} />
         <div className="absolute -bottom-[25%] -right-[10%] w-[65vw] h-[65vw] rounded-full" style={{ background: 'radial-gradient(circle, rgba(179,179,179,.16) 0%, rgba(179,179,179,.05) 35%, transparent 65%)' }} />
         <Skyline />
         <div className="absolute inset-0 rain-a opacity-90" />

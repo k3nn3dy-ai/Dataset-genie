@@ -8,12 +8,12 @@ interface Props {
   className?: string
   bodyClassName?: string
   padded?: boolean
-  tone?: 'default' | 'orange' | 'steel' | 'amber'
+  tone?: 'default' | 'green' | 'steel' | 'amber'
 }
 
 const TONE: Record<NonNullable<Props['tone']>, string> = {
   default: 'border-line',
-  orange: 'border-orange/40 shadow-[0_0_24px_rgba(255,106,26,.08)]',
+  green: 'border-green/40 shadow-[0_0_24px_rgba(34,227,90,.08)]',
   steel: 'border-steel/40 shadow-[0_0_24px_rgba(179,179,179,.08)]',
   amber: 'border-amber/40',
 }

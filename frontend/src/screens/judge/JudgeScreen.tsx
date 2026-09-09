@@ -30,7 +30,7 @@ export function JudgeScreen() {
             <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Input mono={false} value={c.name} onChange={(e) => setDraft({ rubric: draft.rubric.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} className="!h-7 flex-1 !font-semibold" />
-                <span className="font-mono text-[12px] text-orange tabular-nums w-10 text-right">{c.weight}</span>
+                <span className="font-mono text-[12px] text-green tabular-nums w-10 text-right">{c.weight}</span>
                 <IconButton icon="trash" label="Remove criterion" size="sm" onClick={() => setDraft({ rubric: draft.rubric.filter((_, k) => k !== i) })} />
               </div>
               <Input mono={false} value={c.description} onChange={(e) => setDraft({ rubric: draft.rubric.map((x, k) => (k === i ? { ...x, description: e.target.value } : x)) })} className="!h-7 !text-[12.5px]" placeholder="What a 5 looks like" />
@@ -58,7 +58,7 @@ export function JudgeScreen() {
   ) : (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="judged" value={s.judged} tone="orange" />
+        <StatTile size="sm" label="judged" value={s.judged} tone="green" />
         <StatTile size="sm" label="mean score" value={s.mean.toFixed(2)} unit="/ 5" tone="ok" />
         <StatTile size="sm" label={`below ${draft?.low_score_threshold.toFixed(1) ?? '3.0'}`} value={s.below_threshold} tone={s.below_threshold > 0 ? 'amber' : 'default'} hint="flagged low_score, not removed" />
         <StatTile size="sm" label="ties" value={s.ties} tone="steel" hint="excluded from DPO" />

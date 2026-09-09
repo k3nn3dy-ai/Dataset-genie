@@ -8,7 +8,7 @@ interface EmptyProps { icon?: IconName; title: string; body?: ReactNode; action?
 export function EmptyState({ icon = 'sparkle', title, body, action, className }: EmptyProps) {
   return (
     <div className={clsx('panel flex flex-col items-center justify-center text-center gap-3 px-8 py-14 border-dashed', className)}>
-      <div className="w-12 h-12 rounded-card border border-orange/40 flex items-center justify-center text-orange shadow-[0_0_20px_rgba(255,106,26,.15)]">
+      <div className="w-12 h-12 rounded-card border border-green/40 flex items-center justify-center text-green shadow-[0_0_20px_rgba(34,227,90,.15)]">
         <Icon name={icon} size={22} />
       </div>
       <div>
@@ -37,15 +37,15 @@ export function ErrorState({ title = 'Something failed', error, onRetry, classNa
 export function Spinner({ className, label = 'Loading' }: { className?: string; label?: string }) {
   return (
     <div className={clsx('flex items-center gap-2 text-muted font-mono text-[11px] uppercase tracking-[.14em]', className)}>
-      <Icon name="refresh" size={13} className="animate-spin text-orange" />
+      <Icon name="refresh" size={13} className="animate-spin text-green" />
       {label}
     </div>
   )
 }
 
 /** Inline callout / banner. */
-export function Banner({ tone = 'amber', icon, children, className }: { tone?: 'amber' | 'red' | 'orange' | 'ok'; icon?: IconName; children: ReactNode; className?: string }) {
-  const c = { amber: 'border-amber/50 bg-amber/10 text-amber', red: 'border-red/50 bg-red/10 text-red', orange: 'border-orange/50 bg-orange/10 text-orange', ok: 'border-ok/50 bg-ok/10 text-ok' }[tone]
+export function Banner({ tone = 'amber', icon, children, className }: { tone?: 'amber' | 'red' | 'green' | 'ok'; icon?: IconName; children: ReactNode; className?: string }) {
+  const c = { amber: 'border-amber/50 bg-amber/10 text-amber', red: 'border-red/50 bg-red/10 text-red', green: 'border-green/50 bg-green/10 text-green', ok: 'border-ok/50 bg-ok/10 text-ok' }[tone]
   return (
     <div className={clsx('flex items-start gap-2.5 rounded-btn border px-3 py-2 text-[13px] leading-snug', c, className)} role="status">
       <Icon name={icon ?? (tone === 'amber' || tone === 'red' ? 'warning' : 'sparkle')} size={14} className="mt-[2px]" />

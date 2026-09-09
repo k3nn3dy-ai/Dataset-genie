@@ -29,7 +29,7 @@ export function ProjectsScreen() {
       {list.length > 0 && (
         <>
           <div className="grid grid-cols-4 gap-3 mb-5">
-            <StatTile label="projects" value={list.length} tone="orange" />
+            <StatTile label="projects" value={list.length} tone="green" />
             <StatTile label="total spend" value={usd(totalSpend)} tone="steel" />
             <StatTile label="data types" value={[...new Set(list.flatMap((p) => p.data_types))].join(' · ')} size="sm" />
             <StatTile label="mode" value={<span className="text-[15px]">local · OpenRouter</span>} size="sm" hint="~/.dataset-genie" />

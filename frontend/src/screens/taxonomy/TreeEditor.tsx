@@ -16,7 +16,7 @@ export function TreeEditor({ tree, onChange, taskTypes, depth }: Props) {
     <div className="flex flex-col gap-1">
       {tree.length === 0 && <div className="font-mono text-[11px] text-dim py-6 text-center">Tree is empty. Run stage 01 or add topics by hand.</div>}
       {tree.map((n, i) => <NodeRow key={n.id} node={n} index={i} siblings={tree.length} taskTypes={taskTypes} maxDepth={depth} onUpdate={update} onMove={(dir) => onChange(move(tree, i, dir))} onChangeChildren={(children) => update(n.id, (x) => ({ ...x, children }))} />)}
-      <button type="button" onClick={addRoot} className="mt-2 self-start flex items-center gap-1.5 label hover:text-orange"><Icon name="plus" size={11} /> add topic</button>
+      <button type="button" onClick={addRoot} className="mt-2 self-start flex items-center gap-1.5 label hover:text-green"><Icon name="plus" size={11} /> add topic</button>
     </div>
   )
 }
@@ -32,7 +32,7 @@ function NodeRow({ node, index, siblings, taskTypes, maxDepth, onUpdate, onMove,
     <div className="flex flex-col">
       <div className={clsx('group flex items-center gap-2 h-8 rounded-btn pr-1 hover:bg-surface2/70', node.is_negative && 'text-amber')} style={{ paddingLeft: node.depth * 18 }}>
         <button type="button" onClick={() => setOpen((o) => !o)} className={clsx('w-4 h-4 flex items-center justify-center text-dim', children.length === 0 && 'invisible')}><Icon name="chevron" size={10} className={clsx('transition-transform', open && 'rotate-90')} /></button>
-        <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', node.is_leaf ? 'bg-orange' : node.depth === 0 ? 'bg-steel' : 'bg-muted')} />
+        <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', node.is_leaf ? 'bg-green' : node.depth === 0 ? 'bg-steel' : 'bg-muted')} />
         {editing ? (
           <input autoFocus defaultValue={node.label} onBlur={(e) => { setEditing(false); onUpdate(node.id, (n) => ({ ...n, label: e.target.value || n.label, slug: slugify(e.target.value || n.label) })) }} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditing(false) }} className="field h-6 !py-0 flex-1 !text-[12.5px]" />
         ) : (

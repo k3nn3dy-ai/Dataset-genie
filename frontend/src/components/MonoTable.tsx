@@ -73,7 +73,7 @@ export function MonoTable<T>({ rows, columns, rowKey, onRowClick, activeKey, sel
               return (
                 <th
                   key={c.key} style={{ width: c.width }}
-                  className={clsx(cell, 'label !text-[10px] text-left font-normal whitespace-nowrap select-none', c.align === 'right' && 'text-right', c.align === 'center' && 'text-center', c.sortValue && 'cursor-pointer hover:text-text', active && '!text-orange')}
+                  className={clsx(cell, 'label !text-[10px] text-left font-normal whitespace-nowrap select-none', c.align === 'right' && 'text-right', c.align === 'center' && 'text-center', c.sortValue && 'cursor-pointer hover:text-text', active && '!text-green')}
                   onClick={c.sortValue ? () => setSort(active && sort?.dir === 'asc' ? { key: c.key, dir: 'desc' } : { key: c.key, dir: 'asc' }) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -98,9 +98,9 @@ export function MonoTable<T>({ rows, columns, rowKey, onRowClick, activeKey, sel
                 key={k} onClick={onRowClick ? () => onRowClick(r) : undefined}
                 className={clsx(
                   'border-b border-line/70 last:border-b-0 transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-orange/5',
-                  activeKey === k && 'bg-orange/10 shadow-[inset_2px_0_0_#ff6a1a]',
-                  isSel && 'bg-orange/10',
+                  onRowClick && 'cursor-pointer hover:bg-green/5',
+                  activeKey === k && 'bg-green/10 shadow-[inset_2px_0_0_#22e35a]',
+                  isSel && 'bg-green/10',
                   tone === 'amber' && 'text-amber/90', tone === 'red' && 'text-red/90', tone === 'dim' && 'text-dim',
                 )}
               >
@@ -128,14 +128,14 @@ export function TextCell({ text, max = 260, className }: { text: string; max?: n
 
 /** Truncating id cell with the full id on hover. */
 export function IdCell({ id, max = 230, className }: { id: string; max?: number; className?: string }) {
-  return <span className={clsx('block truncate text-orange/90', className)} style={{ maxWidth: max }} title={id}>{id}</span>
+  return <span className={clsx('block truncate text-green/90', className)} style={{ maxWidth: max }} title={id}>{id}</span>
 }
 
 export function Check({ checked, onChange, className }: { checked: boolean; onChange: () => void; className?: string }) {
   return (
     <button
       type="button" role="checkbox" aria-checked={checked} onClick={onChange}
-      className={clsx('w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center transition-colors focus-ring', checked ? 'bg-orange border-orange text-bg' : 'border-line2 bg-bg/60 hover:border-orange/60', className)}
+      className={clsx('w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center transition-colors focus-ring', checked ? 'bg-green border-green text-bg' : 'border-line2 bg-bg/60 hover:border-green/60', className)}
     >
       {checked && <Icon name="check" size={10} strokeWidth={3} />}
     </button>

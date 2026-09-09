@@ -15,10 +15,10 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'
 }
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-orange text-bg border border-orange hover:shadow-glow hover:bg-orangeSoft active:translate-y-px',
+  primary: 'bg-green text-bg border border-green hover:shadow-glow hover:bg-greenSoft active:translate-y-px',
   steel: 'bg-steel text-bg border border-steel hover:shadow-glowSteel active:translate-y-px',
   ghost: 'bg-transparent text-text border border-transparent hover:bg-surface2 hover:border-line2',
-  outline: 'bg-transparent text-orange border border-orange/50 hover:border-orange hover:bg-orange/10',
+  outline: 'bg-transparent text-green border border-green/50 hover:border-green hover:bg-green/10',
   danger: 'bg-transparent text-red border border-red/50 hover:bg-red/10 hover:border-red',
 }
 const SIZE: Record<ButtonSize, string> = {

@@ -2,11 +2,11 @@ import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import { Icon } from './Icon'
 
-export type ChipTone = 'default' | 'orange' | 'steel' | 'ok' | 'amber' | 'red' | 'dim'
+export type ChipTone = 'default' | 'green' | 'steel' | 'ok' | 'amber' | 'red' | 'dim'
 
 const TONE: Record<ChipTone, string> = {
   default: 'bg-surface2 text-text border-line2',
-  orange: 'bg-orange/15 text-orange border-orange/40',
+  green: 'bg-green/15 text-green border-green/40',
   steel: 'bg-steel/15 text-steel border-steel/40',
   ok: 'bg-ok/15 text-ok border-ok/40',
   amber: 'bg-amber/15 text-amber border-amber/40',
@@ -23,7 +23,7 @@ export function Chip({ children, tone = 'default', className, onClick, onRemove,
       type={onClick ? 'button' : undefined} onClick={onClick} title={title}
       className={clsx(
         'inline-flex items-center gap-1 h-[20px] px-1.5 rounded-chip border font-mono text-[10.5px] tracking-[.06em] uppercase whitespace-nowrap leading-none',
-        TONE[tone], onClick && 'cursor-pointer hover:brightness-125 focus-ring', active && 'ring-1 ring-orange/70', className,
+        TONE[tone], onClick && 'cursor-pointer hover:brightness-125 focus-ring', active && 'ring-1 ring-green/70', className,
       )}
     >
       {children}
@@ -42,10 +42,10 @@ export function toneFor(v: string): ChipTone {
     case 'accepted': case 'done': case 'ok': case 'kept': return 'ok'
     case 'refusal': case 'flagged': case 'pii': case 'warn': return 'amber'
     case 'filtered': case 'error': case 'failed': case 'low_score': case 'budget_stop': return 'red'
-    case 'edited': case 'running': case 'calling': return 'orange'
+    case 'edited': case 'running': case 'calling': return 'green'
     case 'near_dup': case 'exact_dup': case 'tie': case 'adversarial': return 'steel'
     case 'easy': return 'ok'
-    case 'medium': return 'orange'
+    case 'medium': return 'green'
     case 'hard': return 'steel'
     default: return 'default'
   }

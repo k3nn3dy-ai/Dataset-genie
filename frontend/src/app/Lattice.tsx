@@ -9,7 +9,7 @@ const FRAGMENTS = [
   '"content":"Diagnosis:', 'cosine 0.93 ≥ 0.92', 'refusal=false', 'stratify_by=leaf', 'seed 42', 'max_seq_len 4096', 'lora_r 16', 'packing=true',
 ]
 
-interface Node { x: number; y: number; r: number; c: 'orange' | 'steel'; ring: boolean; seed: number }
+interface Node { x: number; y: number; r: number; c: 'green' | 'steel'; ring: boolean; seed: number }
 interface Column { x: number; y: number; speed: number; items: string[]; alpha: number }
 
 export function Lattice({ seed = 4242, className }: { seed?: number; className?: string }) {
@@ -39,7 +39,7 @@ export function Lattice({ seed = 4242, className }: { seed?: number; className?:
       canvas.style.height = `${H}px`
       const rnd = mulberry32(seed)
       const n = 70 + Math.floor(rnd() * 41) // 70–110
-      nodes = Array.from({ length: n }, () => ({ x: rnd() * W, y: rnd() * H, r: 1.2 + rnd() * 1.8, c: rnd() < 0.72 ? 'orange' : 'steel', ring: false, seed: rnd() * Math.PI * 2 }))
+      nodes = Array.from({ length: n }, () => ({ x: rnd() * W, y: rnd() * H, r: 1.2 + rnd() * 1.8, c: rnd() < 0.72 ? 'green' : 'steel', ring: false, seed: rnd() * Math.PI * 2 }))
       const ringCount = 8
       for (let i = 0; i < ringCount; i++) nodes[Math.floor(rnd() * n)].ring = true
       edges = []
@@ -70,13 +70,13 @@ export function Lattice({ seed = 4242, className }: { seed?: number; className?:
       for (const b of buses) {
         ctx.setLineDash([6, 10])
         ctx.lineDashOffset = -(t * 18 + b.phase)
-        ctx.strokeStyle = 'rgba(255,106,26,.14)'
+        ctx.strokeStyle = 'rgba(34,227,90,.14)'
         ctx.beginPath(); ctx.moveTo(b.x0, b.y); ctx.lineTo(b.x1, b.y); ctx.stroke()
       }
       ctx.setLineDash([])
 
       // edges
-      ctx.strokeStyle = 'rgba(255,106,26,.13)'
+      ctx.strokeStyle = 'rgba(34,227,90,.13)'
       ctx.beginPath()
       for (const [i, j] of edges) { ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y) }
       ctx.stroke()
@@ -91,7 +91,7 @@ export function Lattice({ seed = 4242, className }: { seed?: number; className?:
         c.items.forEach((s, k) => {
           const y = c.y + k * 22
           if (y < -20 || y > H) return
-          ctx.fillStyle = k % 5 === 0 ? `rgba(179,179,179,${c.alpha})` : `rgba(255,154,92,${c.alpha})`
+          ctx.fillStyle = k % 5 === 0 ? `rgba(179,179,179,${c.alpha})` : `rgba(192,132,252,${c.alpha})`
           ctx.fillText(s, c.x, y)
         })
       }
@@ -99,7 +99,7 @@ export function Lattice({ seed = 4242, className }: { seed?: number; className?:
       // nodes with halos
       for (const nd of nodes) {
         const pulse = 0.65 + 0.35 * Math.sin(t * 0.6 + nd.seed)
-        const col = nd.c === 'orange' ? '255,106,26' : '179,179,179'
+        const col = nd.c === 'green' ? '34,227,90' : '179,179,179'
         ctx.shadowBlur = 14 * pulse
         ctx.shadowColor = `rgba(${col},.8)`
         ctx.fillStyle = `rgba(${col},${0.55 + 0.45 * pulse})`

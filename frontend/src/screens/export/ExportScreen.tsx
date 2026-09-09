@@ -54,7 +54,7 @@ export function ExportScreen() {
   const results = (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-4 gap-2">
-        <StatTile size="sm" label="exportable rows" value={accepted} tone="orange" hint={stats.data ? `${stats.data.by_status.accepted ?? 0} accepted · ${stats.data.by_status.edited ?? 0} edited · ${stats.data.by_status.draft ?? 0} draft` : undefined} />
+        <StatTile size="sm" label="exportable rows" value={accepted} tone="green" hint={stats.data ? `${stats.data.by_status.accepted ?? 0} accepted · ${stats.data.by_status.edited ?? 0} edited · ${stats.data.by_status.draft ?? 0} draft` : undefined} />
         <StatTile size="sm" label="train / eval" value={accepted - evalRows} unit={`/ ${evalRows}`} tone="ok" />
         <StatTile size="sm" label="formats" value={draft?.formats.length ?? 0} hint={draft?.formats.join(', ')} />
         <StatTile size="sm" label="template" value={<span className="text-[15px]">{draft?.validate_template ?? 'none'}</span>} />
@@ -65,7 +65,7 @@ export function ExportScreen() {
         <Button variant="steel" icon="upload" size="lg" loading={run.isPending && !!run.variables?.push} disabled={!draft || draft.formats.length === 0 || !!blocked || !hf.data?.has_token || !draft.hf.repo_id} onClick={() => doExport(true)} data-testid="export-push">Export and push to Hub</Button>
       </div>
       {run.error ? <Banner tone="red">Export failed: {run.error.message}</Banner> : null}
-      {run.isSuccess && <Banner tone="ok" icon="check">Bundle written to <span className="font-mono">{run.data.path}</span> · {run.data.rows_train}/{run.data.rows_eval} train/eval{run.data.gated_out ? ` · ${run.data.gated_out} gated out` : ''}{lastPush && <> · pushed to <a className="underline text-orange" href={lastPush} target="_blank" rel="noreferrer">{lastPush}</a></>}</Banner>}
+      {run.isSuccess && <Banner tone="ok" icon="check">Bundle written to <span className="font-mono">{run.data.path}</span> · {run.data.rows_train}/{run.data.rows_eval} train/eval{run.data.gated_out ? ` · ${run.data.gated_out} gated out` : ''}{lastPush && <> · pushed to <a className="underline text-green" href={lastPush} target="_blank" rel="noreferrer">{lastPush}</a></>}</Banner>}
       {run.isSuccess && (run.data.warnings ?? []).map((w, i) => <Banner key={i} tone="amber">{w}</Banner>)}
       <Panel title="Previous exports" padded={false}>
         {exports.isLoading ? <div className="p-3"><Spinner /></div> : (exports.data ?? []).length === 0 ? <div className="p-4"><EmptyState title="No exports yet" body="Bundles land under ~/.dataset-genie/exports/<slug>/<timestamp>/." className="!py-8" /></div> : (
@@ -75,7 +75,7 @@ export function ExportScreen() {
                 <span className="text-dim shrink-0" title={fmtTime(x.created_at)}>{relTime(x.created_at)}</span>
                 <span className="truncate flex-1 text-text/85">{x.path}</span>
                 <span className="text-muted shrink-0" title="train / eval of first format">{x.rows_train}/{x.rows_eval}</span>
-                <div className="flex gap-1 shrink-0">{x.formats.map((f) => <Chip key={f} tone="orange">{f}</Chip>)}</div>
+                <div className="flex gap-1 shrink-0">{x.formats.map((f) => <Chip key={f} tone="green">{f}</Chip>)}</div>
                 {x.hf_url ? <a href={x.hf_url} target="_blank" rel="noreferrer" className="text-steel hover:underline shrink-0">hub ↗</a> : <span className="text-dim shrink-0">local</span>}
                 <Chip tone={x.status === 'ok' ? 'ok' : 'red'}>{x.status}</Chip>
               </li>

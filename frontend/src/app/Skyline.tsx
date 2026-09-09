@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { mulberry32 } from '../lib/rng'
 
 // Procedural tower-block skyline with scattered neon window dots. Seeded so it never flickers between renders.
-const WINDOW_COLOURS = ['#ff6a1a', '#b3b3b3', '#ffa040', '#ff9a5c']
+const WINDOW_COLOURS = ['#22e35a', '#b3b3b3', '#ffa040', '#6ff59a']
 
 export function Skyline({ seed = 1337, width = 1920, height = 260 }: { seed?: number; width?: number; height?: number }) {
   const { blocks, windows } = useMemo(() => {
