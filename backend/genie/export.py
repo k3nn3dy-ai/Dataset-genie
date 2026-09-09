@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import random
 import re
 import shutil
@@ -732,6 +733,38 @@ def _hf_api(token: str):
     from huggingface_hub import HfApi
 
     return HfApi(token=token)
+
+
+
+log = logging.getLogger(__name__)
+
+def check_push_namespace(cfg: HFPushConfig, token: str) -> None:
+    """Fail fast (before building anything) when the token cannot create repos under the repo_id's
+    namespace. Hub namespaces are case-sensitive for authorisation, so `K3nn3dy/x` is a 403 for user
+    `k3nn3dy`; say so and spell out the fix. If whoami itself fails, stay lenient and let the push try."""
+    if not cfg.repo_id or "/" not in cfg.repo_id:
+        return  # push_bundle reports the malformed id
+    namespace, name = cfg.repo_id.split("/", 1)
+    try:
+        info = _hf_api(token).whoami()
+    except Exception as exc:  # noqa: BLE001 — a Hub hiccup must not block a push that might work
+        log.warning("hf whoami failed (%s); skipping namespace pre-check", exc)
+        return
+    user = info.get("name") if isinstance(info, dict) else None
+    orgs = [o.get("name") for o in (info.get("orgs") or []) if isinstance(o, dict)] if isinstance(info, dict) else []
+    allowed = [n for n in [user, *orgs] if n]
+    if not allowed or namespace in allowed:
+        return
+    fix = next((n for n in allowed if n.lower() == namespace.lower()), None)
+    if fix:
+        raise ValueError(
+            f"Hugging Face namespaces are case-sensitive: your token belongs to '{fix}', not "
+            f"'{namespace}'. Set the repo id to '{fix}/{name}'."
+        )
+    raise ValueError(
+        f"your Hugging Face token cannot create datasets under '{namespace}'. It can write to: "
+        f"{', '.join(allowed)}. Use one of those namespaces, or a token from an account that belongs to '{namespace}'."
+    )
 
 
 def push_bundle(path: Path | str, cfg: HFPushConfig, token: str) -> str:

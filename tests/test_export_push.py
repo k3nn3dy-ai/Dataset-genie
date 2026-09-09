@@ -52,6 +52,30 @@ def test_push_bundle_requires_repo_and_token(api, tmp_path):
     api.create_repo.assert_not_called()
 
 
+def test_check_push_namespace_accepts_user_and_orgs(api):
+    api.whoami.return_value = {"name": "andy", "orgs": [{"name": "cassi-ai"}]}
+    ex.check_push_namespace(HFPushConfig(repo_id="andy/demo"), token="tok")
+    ex.check_push_namespace(HFPushConfig(repo_id="cassi-ai/demo"), token="tok")
+
+
+def test_check_push_namespace_rejects_wrong_namespace_with_case_hint(api):
+    api.whoami.return_value = {"name": "k3nn3dy", "orgs": []}
+    # Hub namespaces are case-sensitive for authorisation: "K3nn3dy" is not the user's namespace.
+    with pytest.raises(ValueError) as exc:
+        ex.check_push_namespace(HFPushConfig(repo_id="K3nn3dy/docker_sft"), token="tok")
+    msg = str(exc.value)
+    assert "K3nn3dy" in msg and "k3nn3dy/docker_sft" in msg  # tells the user the exact fix
+    with pytest.raises(ValueError) as exc:
+        ex.check_push_namespace(HFPushConfig(repo_id="someone-else/demo"), token="tok")
+    assert "k3nn3dy" in str(exc.value)  # lists the namespaces the token can write to
+    api.create_repo.assert_not_called()
+
+
+def test_check_push_namespace_is_lenient_when_whoami_fails(api):
+    api.whoami.side_effect = RuntimeError("hub down")
+    ex.check_push_namespace(HFPushConfig(repo_id="anyone/demo"), token="tok")  # let the push try
+
+
 def test_hf_status_uses_whoami_and_caches_five_minutes(api):
     assert ex.hf_status(None) == {"has_token": False, "username": None}
     s1 = ex.hf_status("hf_secretvalue", now=1000.0)

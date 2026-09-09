@@ -106,6 +106,21 @@ def test_post_export_push_requires_token(client, project_id, monkeypatch):
     assert r.status_code == 400
 
 
+def test_post_export_push_wrong_namespace_is_400_before_building(client, project_id, monkeypatch, genie_home):
+    fake = MagicMock()
+    fake.whoami.return_value = {"name": "andy", "orgs": []}
+    monkeypatch.setattr(ex, "_hf_api", lambda token: fake)
+    monkeypatch.setattr(ex, "get_hf_token", lambda: "tok")
+    r = client.post(
+        f"/api/projects/{project_id}/export",
+        json={"formats": ["sft"], "push": {"repo_id": "Andy/demo"}},
+    )
+    assert r.status_code == 400, r.text
+    assert "andy/demo" in r.json()["detail"]
+    fake.create_repo.assert_not_called()
+    assert client.get(f"/api/projects/{project_id}/exports").json() == []  # nothing built or recorded
+
+
 def test_post_export_pushes_with_mocked_hfapi(client, project_id, monkeypatch):
     fake = MagicMock()
     monkeypatch.setattr(ex, "_hf_api", lambda token: fake)

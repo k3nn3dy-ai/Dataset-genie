@@ -56,6 +56,10 @@ def post_project_id_export(
         token = ex.get_hf_token()
         if not token:
             raise HTTPException(status_code=400, detail="no Hugging Face token configured")
+        try:
+            ex.check_push_namespace(req.push, token)  # before building: a wrong namespace is a guaranteed 403
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     try:
         result = ex.build_bundle(project_id, req, session)
     except ExportValidationError as exc:
