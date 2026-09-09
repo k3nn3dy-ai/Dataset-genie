@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="240" alt="Dataset Genie mark"></p>
+
 # Dataset Genie
 
 **Dataset Genie** is a local web app that turns a two-sentence domain brief into an Unsloth-ready

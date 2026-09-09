@@ -6,6 +6,7 @@ import { STAGES } from '../lib/types'
 import { usePatchProject, useSummary } from '../lib/queries'
 import { useStore } from './store'
 import { Icon } from '../components/Icon'
+import { GenieMark } from '../components/GenieMark'
 import { Button } from '../components/Button'
 import { Field, NumberInput } from '../components/Fields'
 import { Modal } from '../components/Modal'
@@ -25,7 +26,7 @@ export function Rail() {
     <aside className="w-[236px] shrink-0 sticky top-0 h-screen flex flex-col border-r border-line bg-surface1 backdrop-blur-md z-20">
       {/* Wordmark */}
       <NavLink to="/" className="flex items-center gap-3 px-4 h-[68px] border-b border-line">
-        <span className="w-9 h-9 rounded-[9px] border border-green flex items-center justify-center text-green shadow-glow bg-bg/60 shrink-0"><Icon name="sparkle" size={18} /></span>
+        <span className="w-9 h-9 rounded-[9px] border border-green flex items-center justify-center text-green shadow-glow bg-bg/60 shrink-0"><GenieMark size={28} /></span>
         <span className="flex flex-col leading-none min-w-0">
           <span className="font-display font-bold uppercase text-[14px] tracking-[.06em] text-text">Dataset Genie</span>
         </span>
