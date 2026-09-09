@@ -27,7 +27,7 @@ export function SettingsScreen() {
   return (
     <>
       <Header kicker="SYSTEM · KEYS, MODELS, LIMITS" title="Settings"
-        subtitle="Secrets live in the macOS keychain, never in the database, YAML or dataset cards."
+        subtitle="Secrets live in the OS keychain (or an owner-only file in the data folder when there is no keychain, e.g. Docker), never in the database, YAML or dataset cards."
         actions={<Button variant="primary" size="lg" icon="check" disabled={!dirty} loading={put.isPending} onClick={() => draft && put.mutate(draft)} data-testid="run-stage">Save settings</Button>} />
       {settings.error && <ErrorState error={settings.error} onRetry={() => settings.refetch()} />}
       {settings.isLoading && <Spinner />}
@@ -38,7 +38,7 @@ export function SettingsScreen() {
               <div className="flex flex-col gap-4">
                 <SecretRow name="openrouter" label="OpenRouter API key" hint="sk-or-v1-…" />
                 <SecretRow name="huggingface" label="Hugging Face token" hint="hf_…" />
-                <Banner tone="green" icon="lock">Stored in the macOS keychain under service <span className="font-mono">dataset-genie</span>. The UI only ever sees set / unset.</Banner>
+                <Banner tone="green" icon="lock">Stored in the OS keychain under service <span className="font-mono">dataset-genie</span>; in Docker, in <span className="font-mono">secrets.json</span> inside the data volume. Tokens set via <span className="font-mono">OPENROUTER_API_KEY</span> / <span className="font-mono">HF_TOKEN</span> take precedence. The UI only ever sees set / unset.</Banner>
               </div>
             </Panel>
             <Panel title="Budget defaults">

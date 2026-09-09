@@ -1,13 +1,22 @@
-"""Secret storage. Secrets live only in the OS keychain (service "dataset-genie").
+"""Secret storage. Secrets live in the OS keychain (service "dataset-genie").
 
-Names are restricted to the two the app needs. The backend is injectable so tests never touch
-the real keychain; if the keyring backend is missing, locked or fails to initialise we fall back to
-an in-memory store and log a warning (the secret then lives only for the lifetime of the process).
+Names are restricted to the two the app needs. Resolution order for a read:
+
+1. environment variable (OPENROUTER_API_KEY / HF_TOKEN) - how Docker users pass tokens via .env;
+2. the OS keychain;
+3. when no keyring backend is usable (Linux containers, headless sessions) an owner-only file
+   `GENIE_HOME/secrets.json`, so tokens entered in Settings survive a restart; memory only if even
+   that file cannot be written.
+
+The backend is injectable so tests never touch the real keychain. Values are never logged.
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 from collections.abc import MutableMapping
+from pathlib import Path
 
 import keyring
 import keyring.errors
@@ -16,9 +25,11 @@ log = logging.getLogger(__name__)
 
 SERVICE = "dataset-genie"
 SECRET_NAMES: tuple[str, ...] = ("openrouter", "huggingface")
+ENV_VARS: dict[str, str] = {"openrouter": "OPENROUTER_API_KEY", "huggingface": "HF_TOKEN"}
+FILE_NAME = "secrets.json"
 
 _keyring = keyring  # module-level indirection so tests can swap it
-_memory: dict[str, str] = {}  # fallback store when the keyring backend is unusable
+_memory: dict[str, str] = {}  # last-resort store when neither keyring nor the file is usable
 _test_backend: MutableMapping[str, str] | None = None
 _warned = False
 
@@ -42,22 +53,59 @@ def _check_name(name: str) -> str:
 def _warn_once(exc: Exception) -> None:
     global _warned
     if not _warned:
-        log.warning("keyring backend unavailable (%s: %s); secrets held in memory only",
-                    type(exc).__name__, exc)
+        log.warning("keyring backend unavailable (%s: %s); secrets stored in %s (owner-only file)",
+                    type(exc).__name__, exc, _file_path())
         _warned = True
+
+
+# ---------------------------------------------------------------- file fallback
+def _file_path() -> Path:
+    from .config import get_settings  # lazy: config imports nothing from here, but keep it light
+
+    return get_settings().genie_home / FILE_NAME
+
+
+def _file_read() -> dict[str, str]:
+    try:
+        data = json.loads(_file_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {k: v for k, v in data.items() if isinstance(v, str)} if isinstance(data, dict) else {}
+
+
+def _file_write(data: dict[str, str]) -> bool:
+    path = _file_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+        return True
+    except OSError as exc:
+        log.warning("could not write %s (%s); secret held in memory only", path, exc)
+        return False
+
+
+def _from_env(name: str) -> str | None:
+    value = os.environ.get(ENV_VARS[name], "").strip()
+    return value or None
 
 
 def get_secret(name: str) -> str | None:
     _check_name(name)
     if _test_backend is not None:
         return _test_backend.get(name)
+    env = _from_env(name)
+    if env:
+        return env
     if name in _memory:
         return _memory[name]
     try:
         value = _keyring.get_password(SERVICE, name)
     except _KEYRING_FAILURES as exc:
         _warn_once(exc)
-        return None
+        return _file_read().get(name) or None
     return value or None
 
 
@@ -74,7 +122,12 @@ def set_secret(name: str, value: str) -> None:
         _memory.pop(name, None)
     except _KEYRING_FAILURES as exc:
         _warn_once(exc)
-        _memory[name] = value
+        data = _file_read()
+        data[name] = value
+        if _file_write(data):
+            _memory.pop(name, None)
+        else:
+            _memory[name] = value
 
 
 def delete_secret(name: str) -> None:
@@ -89,6 +142,10 @@ def delete_secret(name: str) -> None:
         pass  # nothing stored
     except _KEYRING_FAILURES as exc:
         _warn_once(exc)
+        data = _file_read()
+        if name in data:
+            del data[name]
+            _file_write(data)
 
 
 def secret_status() -> dict[str, bool]:

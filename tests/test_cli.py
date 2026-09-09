@@ -28,6 +28,16 @@ def test_help_lists_commands():
         assert cmd in r.output
 
 
+def test_serve_binds_localhost_by_default_and_accepts_host(monkeypatch):
+    calls: list[dict] = []
+    fake_uvicorn = types.SimpleNamespace(run=lambda app, **kw: calls.append({"app": app, **kw}))
+    monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
+    assert runner.invoke(cli.app, ["serve"]).exit_code == 0
+    assert calls[-1] == {"app": "genie.main:app", "host": "127.0.0.1", "port": 8765, "reload": False}
+    assert runner.invoke(cli.app, ["serve", "--host", "0.0.0.0", "--port", "9000"]).exit_code == 0
+    assert calls[-1] == {"app": "genie.main:app", "host": "0.0.0.0", "port": 9000, "reload": False}
+
+
 def test_parse_stages():
     assert cli.parse_stages("1-8") == [1, 2, 3, 4, 5, 6, 7, 8]
     assert cli.parse_stages("1,2,3") == [1, 2, 3]

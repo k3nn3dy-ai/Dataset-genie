@@ -1,6 +1,6 @@
 """`genie` CLI (typer).
 
-    genie serve [--port 8765] [--reload]
+    genie serve [--port 8765] [--host 127.0.0.1] [--reload]
     genie run CONFIG.yaml [--stages 1-8|1,2,3] [--name NAME]
     genie export SLUG --formats sft,dpo [--split 0.05] [--template llama-3.1]
                  [--push --repo user/name --private/--public --license cc-by-4.0 --tag v0.1.0]
@@ -40,11 +40,11 @@ SECRET_NAMES = {"openrouter": "openrouter", "huggingface": "huggingface", "hf": 
 
 # ---------------------------------------------------------------- serve
 @app.command()
-def serve(port: int = 8765, reload: bool = False) -> None:
-    """Start the web app (API + built frontend)."""
+def serve(port: int = 8765, reload: bool = False, host: str = "127.0.0.1") -> None:
+    """Start the web app (API + built frontend). Use --host 0.0.0.0 inside a container."""
     import uvicorn
 
-    uvicorn.run("genie.main:app", port=port, reload=reload)
+    uvicorn.run("genie.main:app", host=host, port=port, reload=reload)
 
 
 # ---------------------------------------------------------------- helpers
