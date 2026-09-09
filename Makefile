@@ -41,9 +41,9 @@ lint:
 seed-demo: ## demo project "Linux Incident Triage" with realistic fake data (idempotent; honours GENIE_HOME)
 	$(PY) python scripts/seed_demo.py
 
-screenshots: ## Playwright captures of all 11 screens into docs/screenshots (needs `make dev` running; falls back to ?mock=1)
+screenshots: ## Playwright captures of all 11 screens into docs/screenshots (needs `make start`; MOCK=0 for real projects)
 	cd frontend && npx playwright install chromium >/dev/null 2>&1 || true
-	cd frontend && npx -y tsx ../scripts/screenshots.ts
+	cd frontend && BASE_URL=$${BASE_URL:-http://127.0.0.1:8765} MOCK=$${MOCK:-1} npx -y tsx ../scripts/screenshots.ts
 
 start: ## run the built app in the background on :8765 (scripts/start.sh --dev for hot reload)
 	@scripts/start.sh

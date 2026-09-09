@@ -1,7 +1,8 @@
 # Dataset Genie
 
-**Dataset Genie** is a local web app (Mac, browser UI) that turns a two-sentence domain brief into an
-Unsloth-ready fine-tuning dataset. It drives an eight-stage pipeline through OpenRouter — taxonomy →
+**Dataset Genie** is a local web app that turns a two-sentence domain brief into an Unsloth-ready
+fine-tuning dataset. It runs on Mac, Windows and Linux in Docker (one script), or natively on
+macOS / Linux for development, and you use it in the browser. It drives an eight-stage pipeline through OpenRouter — taxonomy →
 prompts → teacher responses → rejected variants → LLM judge → filters → human review → export — and
 writes JSONL in the five shapes Unsloth trainers consume (SFT, Alpaca, DPO/ORPO, tool-calling, GRPO),
 plus a dataset card, a manifest and the exact `generation_config.yaml` that reproduces the run.
@@ -27,52 +28,19 @@ SQLite database so nothing is a black box.
 | ![Review](docs/screenshots/08-review.png) | ![Export](docs/screenshots/09-export.png) | ![Settings](docs/screenshots/10-settings.png) |
 | 07 Review | 08 Export | Settings |
 
-All captures are of the seeded demo project against the real backend. Regenerate with `make seed-demo && make dev` in one terminal and `make screenshots` in another (the script talks to Vite on `127.0.0.1:5173`, which proxies `/api` to the backend on `:8765`; if the backend is down it falls back to the UI's `?mock=1` data).
+All captures use the UI's built-in demo data (`?mock=1`), so they contain no real projects or accounts. Regenerate with the app running (`make start`) and `make screenshots`; set `MOCK=0` to shoot your real projects instead.
 
 ## Quickstart
 
-Requirements (native): macOS, Python 3.11 (via [`uv`](https://docs.astral.sh/uv/)), Node ≥ 20, an
-[OpenRouter](https://openrouter.ai/) API key. Optional: a Hugging Face token for publishing.
-On Windows, or to skip the toolchain entirely, see [Run with Docker](#run-with-docker-mac-windows-linux).
+You need an [OpenRouter](https://openrouter.ai/) API key to generate anything, and optionally a
+Hugging Face token to publish. Then pick one of the two ways to run the app.
 
-```bash
-make install          # uv venv + `uv pip install -e ".[dev]"` + npm install
-make dev              # backend on :8765 (reload) + Vite on :5173 with /api proxied
-open http://localhost:5173
-```
+### Option A · Docker (Mac, Windows, Linux)
 
-1. **Settings → Secrets**: paste your OpenRouter key (and HF token if you want to push). Keys go to
-   the macOS keychain via `keyring`, never to disk or the database.
-2. **Projects → New project**: pick a preset (`quick-sft`, `dpo-corruptor`, `tool-calling-200`,
-   `reasoning-traces`), give it a name and a domain brief.
-3. Walk the stages left to right. Each shows an **estimate** before `RUN STAGE` and a live run
-   monitor (done/total, rows/min, refusal rate, errors, per-worker strip, raw log).
-4. **Export** writes a bundle to `~/.dataset-genie/exports/<slug>/<timestamp>/` and, if you ask,
-   pushes it to the Hub as a *private* dataset repo.
-
-Single-process build (backend serves the compiled UI):
-
-```bash
-make build            # vite build → frontend/dist
-uv run genie serve    # http://localhost:8765
-```
-
-### Start and stop
-
-```
-make start        # build the UI if needed, run the app in the background, open http://localhost:8765
-make stop         # stop it (also stops anything `make dev` left on :8765 / :5173)
-make status       # is it running?
-scripts/start.sh --dev   # backend with hot reload on :8765 + Vite on :5173
-```
-
-Logs go to `~/.dataset-genie/genie.log`; the process id is in `~/.dataset-genie/genie.pid`.
-
-### Run with Docker (Mac, Windows, Linux)
-
-No Python or Node needed, only [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-The scripts check Docker is running, create `.env` from `.env.example` on first run, build the
-image, start it, wait for the health check and open the browser.
+Nothing to install except [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or
+Docker Engine with the compose plugin on Linux). The start script checks Docker is running, creates
+`.env` from `.env.example` on first run, builds the image, starts it, waits for the health check
+and opens the browser.
 
 ```bash
 scripts/docker-start.sh          # Mac / Linux            (or: make docker-start)
@@ -91,8 +59,39 @@ scripts/docker-stop.sh           # stop; --reset also wipes the database and tok
 - The database lives in the `genie-data` Docker volume and survives rebuilds; exports are
   bind-mounted to `./exports/` so bundles appear next to the repo. Paths shown in the UI such as
   `/data/exports/<slug>/...` are `./exports/<slug>/...` on your machine.
-- Under the hood it is `docker compose up -d --build` with the `Dockerfile` and
-  `docker-compose.yml` in the repo root.
+- Logs: `docker compose logs -f genie`. Under the hood it is `docker compose up -d --build` with
+  the `Dockerfile` and `docker-compose.yml` in the repo root.
+- Linux only: the container runs as uid 10001, so make `./exports` writable for it
+  (`chmod o+w exports`).
+
+### Option B · Native (macOS / Linux, for development)
+
+Requirements: Python 3.11 via [`uv`](https://docs.astral.sh/uv/), Node ≥ 20, `make`.
+
+```bash
+make install      # uv venv + `uv pip install -e ".[dev]"` + npm install
+make start        # build the UI if needed, run the app in the background, open http://localhost:8765
+make stop         # stop it (also stops anything `make dev` left on :8765 / :5173)
+make status       # is it running?
+```
+
+For hot reload use `make dev` (backend on :8765 with reload, Vite on :5173 proxying `/api`) or
+`scripts/start.sh --dev`. Logs go to `~/.dataset-genie/genie.log`; the process id is in
+`~/.dataset-genie/genie.pid`. On Windows, use Docker or WSL for the native path: the helper
+scripts are bash.
+
+### First run
+
+1. **Settings → Secrets**: paste your OpenRouter key (and HF token if you want to push). Keys go to
+   the OS keychain (macOS Keychain, Windows Credential Manager, Secret Service on Linux) via
+   `keyring`, never to the database. Where no keychain exists, such as inside Docker, they go to an
+   owner-only `secrets.json` in the data folder. Docker users can also set them in `.env`.
+2. **Projects → New project**: pick a preset (`quick-sft`, `dpo-corruptor`, `tool-calling-200`,
+   `reasoning-traces`), give it a name and a domain brief.
+3. Walk the stages left to right. Each shows an **estimate** before `RUN STAGE` and a live run
+   monitor (done/total, rows/min, refusal rate, errors, per-worker strip, raw log).
+4. **Export** writes a bundle to `~/.dataset-genie/exports/<slug>/<timestamp>/` (`./exports/` in
+   Docker) and, if you ask, pushes it to the Hub as a *private* dataset repo.
 
 ## The pipeline, stage by stage
 
@@ -255,7 +254,7 @@ are the one exception: they are excluded from DPO export because a tie is not a 
 ## Publishing to the Hugging Face Hub
 
 From the Export screen (or `genie export <slug> --push --repo user/name`): repo id, **Private by default**, licence,
-version tag. The token comes from the keychain; the app calls `create_repo(repo_type="dataset",
+version tag. The token comes from Settings (keychain or secrets file) or `HF_TOKEN`; the app calls `create_repo(repo_type="dataset",
 private=True)` then `upload_folder`, tags the version and shows the resulting URL. Token status is
 checked with `whoami()`.
 
@@ -267,7 +266,8 @@ checked with `whoami()`.
   Linux) they go to an owner-only `secrets.json` in `GENIE_HOME`; `OPENROUTER_API_KEY` /
   `HF_TOKEN` environment variables take precedence over both.
 - The app binds to localhost and has no auth; it is a single-user local tool. The Docker image
-  binds to `0.0.0.0` inside the container, but compose publishes the port on localhost only.
+  binds to `0.0.0.0` inside the container, but compose publishes the port on your machine only;
+  do not expose it to a network without putting auth in front of it.
 - Raw model calls are stored locally for transparency — delete a project to delete its calls.
 
 ## CLI
@@ -275,13 +275,13 @@ checked with `whoami()`.
 All commands run as `uv run genie …` (or plain `genie` inside the venv).
 
 ```
-genie serve [--port 8765] [--reload]              API + built UI on one port
+genie serve [--port 8765] [--host 127.0.0.1] [--reload]   API + built UI on one port (Docker uses --host 0.0.0.0)
 genie run <config.yaml> [--stages 1-8|1,3|3-5,8] [--name NAME]
 genie export <slug> [--formats sft,alpaca,dpo,tools,grpo] [--split 0.05] [--template llama-3.1|chatml|gemma|none]
                     [--stratify-by leaf|topic|difficulty|none] [--gate/--no-gate] [--no-scores] [--seed 42]
                     [--push --repo user/name [--private/--public] [--license cc-by-4.0] [--tag v0.1.0]]
 genie models [--search TEXT]                      OpenRouter catalogue with $/1M in/out prices
-genie secrets set openrouter|huggingface          hidden prompt → keychain; never echoed or logged
+genie secrets set openrouter|huggingface          hidden prompt → keychain (or secrets file); never echoed or logged
 genie secrets status                              which tokens are configured (never the values)
 ```
 
@@ -295,11 +295,11 @@ genie secrets status                              which tokens are configured (n
 | Structured-output errors from a model | Pick a model whose catalogue entry supports `structured_outputs`, or the client falls back to `json_object` + one repair call |
 | Same-family warning on Judge | Choose a judge from a different provider family than the teacher |
 | Export fails template validation | Read the first 10 offending ids in the error; fix in Review (edits are re-validated) |
-| `keyring` errors on a headless Mac | Unlock the login keychain, or run the app from a logged-in session |
+| `keyring` warning: backend unavailable | Normal in Docker and on headless Linux: tokens go to `secrets.json` in the data folder instead. On a Mac, unlock the login keychain |
 | Docker: `Docker is installed but not running` | Start Docker Desktop and wait for the whale icon to settle, then rerun the start script |
-| Docker: port 8765 already in use | `make stop` if the native app is running, or set `GENIE_PORT=9000` in `.env` |
+| Docker: port 8765 already in use | `make stop` if the native app is running, or set `GENIE_PORT=9000` in `.env`. Don't run both at once: `localhost` may resolve to either |
 | Docker on Linux: export fails with permission denied | The container runs as uid 10001; `chmod o+w exports` or `chown 10001 exports` |
-| `make screenshots` says backend unavailable | It falls back to the UI's `?mock=1` data; run `make seed-demo && make dev` first for real data |
+| `make screenshots` shows only demo data | That is the default (`MOCK=1`); run `make start` and `MOCK=0 make screenshots` for your real projects |
 
 ## Project layout
 
@@ -314,17 +314,20 @@ backend/genie/
   api/         one router per resource under /api
 frontend/      Vite + React + TypeScript + Tailwind (lofi-cyberpunk shell, 10 screens)
 tests/         pytest: golden JSONL fixtures, FakeOpenRouter, integration + adversarial runner tests
-scripts/       seed_demo.py, screenshots.ts
+scripts/       start/stop (native), docker-start/docker-stop (.sh, .ps1, .cmd), seed_demo.py, screenshots.ts
 docs/          user guide, screenshots
+Dockerfile, docker-compose.yml, .env.example
 ```
 
-Data lives in `$GENIE_HOME` (default `~/.dataset-genie/`): `genie.db` (SQLite, WAL) and `exports/`.
+Data lives in `$GENIE_HOME` (default `~/.dataset-genie/`; `/data` in the Docker volume): `genie.db`
+(SQLite, WAL), `exports/` and, without a keychain, `secrets.json`.
 
 ## Development
 
 ```bash
 make test        # pytest + tsc
 make lint        # ruff + tsc
+make screenshots # regenerate docs/screenshots (app must be running)
 uv run pytest -q tests/test_pipeline_integration.py    # full pipeline against FakeOpenRouter
 ```
 
