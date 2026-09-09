@@ -1,6 +1,6 @@
 """Stage 8 — build an export bundle from the DB and optionally push it to the Hugging Face Hub.
 
-Bundle layout (spec §8):
+Bundle layout:
     exports/<project-slug>/<YYYYMMDD-HHMMSS>/
         <format>/train.jsonl, <format>/eval.jsonl   one dir per requested format
         README.md                                   HF dataset card (YAML front-matter); the Hub renders only this name
@@ -207,7 +207,7 @@ def select_pairs(
 
     Ties — status `tie` or a judge verdict of `tie` — are excluded when `drop_ties` is on.
     Flipped pairs — the judge preferred the *rejected* side — are always excluded and counted in
-    `stats["flipped"]`: exporting them as-is would teach the wrong preference (brief §4.5).
+    `stats["flipped"]`: exporting them as-is would teach the wrong preference.
     """
     statuses = ["draft", "judged", "accepted"] + ([] if drop_ties else ["tie"])
     stmt = (
@@ -740,8 +740,8 @@ log = logging.getLogger(__name__)
 
 def check_push_namespace(cfg: HFPushConfig, token: str) -> None:
     """Fail fast (before building anything) when the token cannot create repos under the repo_id's
-    namespace. Hub namespaces are case-sensitive for authorisation, so `K3nn3dy/x` is a 403 for user
-    `k3nn3dy`; say so and spell out the fix. If whoami itself fails, stay lenient and let the push try."""
+    namespace. Hub namespaces are case-sensitive for authorisation, so `Alice/x` is a 403 for user
+    `alice`; say so and spell out the fix. If whoami itself fails, stay lenient and let the push try."""
     if not cfg.repo_id or "/" not in cfg.repo_id:
         return  # push_bundle reports the malformed id
     namespace, name = cfg.repo_id.split("/", 1)

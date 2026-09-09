@@ -358,7 +358,7 @@ def test_unknown_project_and_format(genie_home):
 
 # ------------------------------------------------------------------ flipped pairs (live run)
 def test_dpo_export_excludes_pairs_where_judge_preferred_rejected(genie_home):
-    """Brief §4.5: confirm chosen > rejected. A pair the judge flipped would teach the wrong
+    """Confirm chosen > rejected. A pair the judge flipped would teach the wrong
     preference if exported as-is, so it is dropped and reported."""
     from genie.models import PairRecord
 

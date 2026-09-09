@@ -1,7 +1,7 @@
 """Fail-loud validation run on every item BEFORE a single JSONL line is written.
 
 Two layers:
-  1. Structural (spec §3): optional single leading system turn; strict user/assistant
+  1. Structural: optional single leading system turn; strict user/assistant
      alternation, with `tool` turns allowed only immediately after an assistant turn carrying
      `tool_calls` (ids must match) and followed by an assistant turn; final turn is an assistant
      reply with content and no unanswered tool_calls; assistant content has no trailing whitespace; every turn has content or tool_calls;

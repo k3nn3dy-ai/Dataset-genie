@@ -53,21 +53,21 @@ def test_push_bundle_requires_repo_and_token(api, tmp_path):
 
 
 def test_check_push_namespace_accepts_user_and_orgs(api):
-    api.whoami.return_value = {"name": "andy", "orgs": [{"name": "cassi-ai"}]}
+    api.whoami.return_value = {"name": "andy", "orgs": [{"name": "example-org"}]}
     ex.check_push_namespace(HFPushConfig(repo_id="andy/demo"), token="tok")
-    ex.check_push_namespace(HFPushConfig(repo_id="cassi-ai/demo"), token="tok")
+    ex.check_push_namespace(HFPushConfig(repo_id="example-org/demo"), token="tok")
 
 
 def test_check_push_namespace_rejects_wrong_namespace_with_case_hint(api):
-    api.whoami.return_value = {"name": "k3nn3dy", "orgs": []}
-    # Hub namespaces are case-sensitive for authorisation: "K3nn3dy" is not the user's namespace.
+    api.whoami.return_value = {"name": "alice", "orgs": []}
+    # Hub namespaces are case-sensitive for authorisation: "Alice" is not the user's namespace.
     with pytest.raises(ValueError) as exc:
-        ex.check_push_namespace(HFPushConfig(repo_id="K3nn3dy/docker_sft"), token="tok")
+        ex.check_push_namespace(HFPushConfig(repo_id="Alice/docker_sft"), token="tok")
     msg = str(exc.value)
-    assert "K3nn3dy" in msg and "k3nn3dy/docker_sft" in msg  # tells the user the exact fix
+    assert "Alice" in msg and "alice/docker_sft" in msg  # tells the user the exact fix
     with pytest.raises(ValueError) as exc:
         ex.check_push_namespace(HFPushConfig(repo_id="someone-else/demo"), token="tok")
-    assert "k3nn3dy" in str(exc.value)  # lists the namespaces the token can write to
+    assert "alice" in str(exc.value)  # lists the namespaces the token can write to
     api.create_repo.assert_not_called()
 
 

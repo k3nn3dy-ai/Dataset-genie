@@ -25,6 +25,7 @@ const BASE_URL = (process.env.BASE_URL ?? 'http://localhost:5173').replace(/\/$/
 const OUT_DIR = process.env.OUT_DIR ?? resolve(HERE, '..', 'docs', 'screenshots')
 const WANT_PROJECT = process.env.PROJECT ?? 'linux-incident-triage'
 const FORCE_MOCK = process.env.MOCK === '1'
+const MOCK_PROJECT = process.env.MOCK_PROJECT ?? 'p_linux' // id of the richest project in the frontend mock layer
 const WIDTH = 1600
 const HEIGHT = 1000
 const ONLY = new Set((process.env.ONLY ?? '').split(',').map((s) => s.trim()).filter(Boolean))
@@ -38,7 +39,7 @@ const STAGE_FILES: Record<number, string> = {
 type ProjectLite = { id: string; slug: string; name: string }
 
 async function resolveProject(): Promise<{ id: string; mock: boolean }> {
-  if (FORCE_MOCK) return { id: 'demo', mock: true }
+  if (FORCE_MOCK) return { id: MOCK_PROJECT, mock: true }
   try {
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), 3000)
@@ -53,7 +54,7 @@ async function resolveProject(): Promise<{ id: string; mock: boolean }> {
     return { id: hit.id, mock: false }
   } catch (e) {
     console.warn(`backend unavailable (${(e as Error).message}); falling back to ?mock=1`)
-    return { id: 'demo', mock: true }
+    return { id: MOCK_PROJECT, mock: true }
   }
 }
 
@@ -79,6 +80,8 @@ async function shoot(page: Page, path: string, file: string, mock: boolean) {
   const url = `${BASE_URL}${path}${mock ? (path.includes('?') ? '&' : '?') + 'mock=1' : ''}`
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
   await settle(page)
+  // the rail's MOCK chip is a dev indicator, not part of the product: keep it out of the docs
+  if (mock) await page.addStyleTag({ content: '[title="Mock data (no backend)"]{display:none}' })
   const out = resolve(OUT_DIR, `${file}.png`)
   await page.screenshot({ path: out, fullPage: false })
   const title = await page.title()

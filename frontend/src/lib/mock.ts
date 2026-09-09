@@ -18,7 +18,7 @@ function seedDemo(): void {
   const gen = generate(demoTree, demo.slug)
   state.set(demo.id, { project: demo, tree: demoTree, ...gen, stagesDone: 6, exports: [
     { id: 'x1', created_at: Date.now() / 1000 - 5400, formats: ['sft'], path: '~/.dataset-genie/exports/linux-incident-triage/20260906-142210', rows_train: 92, rows_eval: 5, hf_url: null, status: 'ok' },
-    { id: 'x2', created_at: Date.now() / 1000 - 1200, formats: ['sft', 'dpo'], path: '~/.dataset-genie/exports/linux-incident-triage/20260907-101833', rows_train: 96, rows_eval: 5, hf_url: 'https://huggingface.co/datasets/k3nn3dy/linux-incident-triage', status: 'ok' },
+    { id: 'x2', created_at: Date.now() / 1000 - 1200, formats: ['sft', 'dpo'], path: '~/.dataset-genie/exports/linux-incident-triage/20260907-101833', rows_train: 96, rows_eval: 5, hf_url: 'https://huggingface.co/datasets/demo-user/linux-incident-triage', status: 'ok' },
   ], restored: new Set() })
   const k8s = makeProject('p_k8s', 'Kubernetes runbooks', 'Cluster operators asking about pod scheduling, networking and rollout failures.', 'domain-expert', { data_types: ['sft'], budget_cap_usd: 25 }, 3.1)
   const k8sTree = buildTaxonomy().slice(0, 2)
@@ -53,7 +53,7 @@ let settings: SettingsData = {
   embedding_model: 'openai/text-embedding-3-small',
   budget_cap_usd: 15, stop_at_pct: 90, concurrency: 8, prefer_prompt_caching: true, allow_fallback_providers: true, pinned_provider: '',
 }
-let secrets: SecretsStatus = { openrouter: true, huggingface: true, hf_user: 'k3nn3dy' }
+let secrets: SecretsStatus = { openrouter: true, huggingface: true, hf_user: 'demo-user' }
 
 function filterRows(rows: RowItem[], q: RowQuery): RowItem[] {
   return rows.filter((r) => {

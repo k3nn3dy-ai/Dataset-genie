@@ -1,6 +1,4 @@
-"""Throwaway verification tests for the Dataset Genie code review. NOT part of the repo."""
-# Ported from the independent code review (2026-09-07): each test asserts the FIXED behaviour
-# of a confirmed finding; see DECISIONS.md rows 27–34. Kept close to the original probes.
+"""Regression tests from the September 2026 code review: each asserts the fixed behaviour of a confirmed finding."""
 # ruff: noqa: F841, RUF059
 from __future__ import annotations
 

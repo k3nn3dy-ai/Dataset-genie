@@ -48,7 +48,7 @@ export function defaultConfig(): ProjectConfig {
       low_score_threshold: 3, drop_ties_from_dpo: true,
     },
     filters: { exact_dup: true, near_dup: true, near_dup_threshold: 0.92, refusal: true, pii: true, length: true, min_chars: 40, max_chars: 12000, language: true, expected_language: 'en', embedding_model: 'openai/text-embedding-3-small' },
-    export: { formats: ['sft', 'dpo'], eval_split: 0.05, stratify_by: 'leaf', validate_template: 'llama-3.1', include_judge_scores: true, gate_on_score: false, gate_threshold: 3, seed: 42, hf: { repo_id: 'k3nn3dy/linux-incident-triage', private: true, license: 'cc-by-4.0', version_tag: 'v0.1.0' } },
+    export: { formats: ['sft', 'dpo'], eval_split: 0.05, stratify_by: 'leaf', validate_template: 'llama-3.1', include_judge_scores: true, gate_on_score: false, gate_threshold: 3, seed: 42, hf: { repo_id: 'demo-user/linux-incident-triage', private: true, license: 'cc-by-4.0', version_tag: 'v0.1.0' } },
     tools_schemas: [],
   }
 }

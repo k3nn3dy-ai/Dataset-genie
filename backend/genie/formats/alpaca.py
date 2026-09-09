@@ -1,6 +1,6 @@
 """Alpaca: {"instruction", "input", "output"} — Unsloth SFTTrainer + alpaca template.
 
-Mapping (spec §8):
+Mapping:
   * system turn, if present → prepended to `instruction` as "System: …\\n\\n"
   * first user turn → `instruction`
   * every turn strictly between the first user turn and the final assistant turn → `input`,

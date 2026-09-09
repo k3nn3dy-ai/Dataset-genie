@@ -1,4 +1,4 @@
-"""Structural + template invariants enforced before any JSONL is written (spec §3, §8)."""
+"""Structural + template invariants enforced before any JSONL is written."""
 from __future__ import annotations
 
 import pytest
