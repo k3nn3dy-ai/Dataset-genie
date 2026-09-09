@@ -286,6 +286,19 @@ async def handle(item: WorkItem, ctx) -> ItemResult:
             max_tokens=cfg.max_tokens, tools=tools or None, provider=provider_block(teacher),
         )
         results.append(res)
+        if not (res.content or "").strip() and not res.tool_calls:
+            # No visible text is a failed generation, not an answer — and not a refusal either
+            # (an empty string would otherwise trip the "content-free reply" refusal rule).
+            # Typical cause: a reasoning model spent the whole max_tokens budget on hidden reasoning.
+            details = (res.usage or {}).get("completion_tokens_details") or {}
+            reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
+            why = f"finish_reason={getattr(res, 'finish_reason', None) or 'unknown'}"
+            if reasoning:
+                why += f", {reasoning} reasoning tokens"
+            raise ResponseError(
+                f"{teacher.slug} returned no visible text ({why}; max_tokens={cfg.max_tokens}). "
+                "Raise max_tokens for this reasoning model or pick another teacher, then resume the run."
+            )
         return res
 
     try:

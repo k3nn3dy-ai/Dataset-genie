@@ -130,6 +130,24 @@ async def test_refusal_marks_row_and_result_but_not_on_negative_leaves(world):
         assert "refusal" in refused.meta["flags"]
 
 
+async def test_empty_teacher_reply_is_an_error_not_a_row(world):
+    """A reasoning teacher that spends max_tokens on hidden reasoning returns finish_reason=length and
+    no visible text. That is a failed generation: no row (draft OR refusal) may be persisted, on
+    normal and negative leaves alike, and the error must say why so the user can raise max_tokens."""
+    p, _, _, _ = world
+    ctx = FakeCtx(p.id, 3)
+    ctx.script(lambda model, msgs, kw: FakeCallResult(content="", finish_reason="length",
+                                                     usage={"completion_tokens": 2049,
+                                                            "completion_tokens_details": {"reasoning_tokens": 2048}}))
+    with db.session_scope() as s:
+        items, _ = responses.plan(p, {}, s)
+    res = await run_all(ctx, p, items)
+    assert [r.status for r in res] == ["error"] * 4
+    assert "no visible text" in res[0].error and "length" in res[0].error and "2048 reasoning tokens" in res[0].error
+    with db.session_scope() as s:
+        assert s.query(RowRecord).filter_by(project_id=p.id).count() == 0
+
+
 async def test_multi_turn_alternates_and_ends_on_assistant(world):
     p, _, prompts, _ = world
     ctx = FakeCtx(p.id, 3, params={"multi_turn": True, "turns_min": 3, "turns_max": 3, "user_mood": "confused"})
