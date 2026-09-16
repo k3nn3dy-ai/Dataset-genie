@@ -269,6 +269,15 @@ colleague with their own key gets the same pipeline. It never contains keys.
 
 ---
 
+## Drive it from an agent
+
+If the app is running (Docker or `make start`) you can point an MCP client at
+`http://localhost:8765/mcp` with `Authorization: Bearer <GENIE_MCP_TOKEN>`. The agent
+can set secrets, create a project from a preset, run stages 1–6, review rows, and
+export. See the README **Agents (MCP)** section.
+
+---
+
 ## 8. When something looks wrong
 
 | You see | It means | Do this |

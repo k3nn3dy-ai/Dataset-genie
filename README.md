@@ -66,6 +66,29 @@ scripts/docker-stop.sh           # stop; --reset also wipes the database and tok
 - Linux only: the container runs as uid 10001, so make `./exports` writable for it
   (`chmod o+w exports`).
 
+### Agents (MCP)
+
+The same Docker (or native) process exposes [MCP](https://modelcontextprotocol.io/) at
+`http://localhost:8765/mcp` (Streamable HTTP). The UI and `/api/*` stay unauthenticated;
+MCP requires `GENIE_MCP_TOKEN`. `scripts/docker-start.sh` writes a token into `.env` on
+first run and prints it once.
+
+Cursor example (`docs/mcp.example.json`):
+
+````json
+{
+  "mcpServers": {
+    "dataset-genie": {
+      "url": "http://localhost:8765/mcp",
+      "headers": { "Authorization": "Bearer <GENIE_MCP_TOKEN>" }
+    }
+  }
+}
+````
+
+Native: `export GENIE_MCP_TOKEN=...` before `make start`. If the token is empty, `/mcp`
+returns 503 and the rest of the app still works. Do not expose the port on a network.
+
 ### Option B · Native (macOS / Linux, for development)
 
 Requirements: Python 3.11 via [`uv`](https://docs.astral.sh/uv/), Node ≥ 20, `make`.
