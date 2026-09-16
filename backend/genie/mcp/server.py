@@ -56,6 +56,9 @@ def mount_mcp(app: FastAPI) -> None:
     from starlette.middleware import Middleware
     from starlette.routing import Mount
 
+    from .tools import setup
+
+    setup.register()
     inner = mcp_asgi()
     app.state.mcp_asgi = inner
     wrapped = Starlette(
