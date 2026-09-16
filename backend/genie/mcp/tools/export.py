@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from genie import export as ex
 from genie.api.projects import _project
@@ -11,7 +12,6 @@ from genie.formats.validate import ExportValidationError
 from genie.mcp.errors import fail, map_exc
 from genie.mcp.server import mcp
 from genie.pipeline._common import project_config
-from genie.schemas import HFPushConfig
 
 _registered = False
 
@@ -52,14 +52,21 @@ def export_dataset(
             overlay["gate_threshold"] = gate_threshold
         if seed is not None:
             overlay["seed"] = seed
-        if overlay:
-            req = req.model_copy(update=overlay)
-        token = None
         if push is not None:
-            req = req.model_copy(update={"push": HFPushConfig.model_validate(push)})
+            overlay["push"] = push
+        try:
+            req = ex.ExportRequest.model_validate({**req.model_dump(), **overlay})
+        except ValidationError as exc:
+            fail("bad_request", str(exc))
+        token = None
+        if req.push is not None:
             token = ex.get_hf_token()
             if not token:
                 fail("missing_secret", "no Hugging Face token configured", name="huggingface")
+            try:
+                ex.check_push_namespace(req.push, token)
+            except ValueError as exc:
+                fail("bad_request", str(exc))
         try:
             result = ex.build_bundle(project_id, req, session)
         except ExportValidationError as exc:

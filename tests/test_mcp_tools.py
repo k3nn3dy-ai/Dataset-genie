@@ -195,6 +195,23 @@ def test_review_rows_invalid_messages(genie_home):
     assert ei.value.code == "invalid_messages"
 
 
+def test_review_rows_invalid_status_is_bad_request(genie_home):
+    with pytest.raises(ToolError) as ei:
+        review_rows("project-id", row_id="row-id", status="nope")
+    assert ei.value.code == "bad_request"
+
+
+def test_export_invalid_eval_split_is_bad_request(genie_home):
+    from golden.seed import seed_project
+
+    with db.session_scope() as s:
+        project = seed_project(s, rows_per_leaf=1)
+        pid = project.id
+    with pytest.raises(ToolError) as ei:
+        export_dataset(pid, eval_split=2.0)
+    assert ei.value.code == "bad_request"
+
+
 def test_export_secret_leak(genie_home):
     from golden.seed import seed_project
 

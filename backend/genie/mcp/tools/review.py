@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from genie.api.rows import BulkBody, RowPatch, bulk, patch_row
 from genie.db import session_scope
@@ -34,12 +35,15 @@ def review_rows(
                 map_exc(exc)
     if row_id is None:
         fail("bad_request", "provide ids+action or row_id")
-    patch = RowPatch(
-        messages=messages,
-        status=status,  # type: ignore[arg-type]
-        flags_add=flags_add or [],
-        flags_remove=flags_remove or [],
-    )
+    try:
+        patch = RowPatch(
+            messages=messages,
+            status=status,  # type: ignore[arg-type]
+            flags_add=flags_add or [],
+            flags_remove=flags_remove or [],
+        )
+    except ValidationError as exc:
+        fail("bad_request", str(exc))
     with session_scope() as session:
         try:
             return patch_row(project_id, row_id, patch, session)
