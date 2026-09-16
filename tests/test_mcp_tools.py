@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from fastapi import HTTPException
 
-from genie import secrets
+from _fake_ctx import FakeRunner, make_project, seed_tree
+from genie import db, secrets
 from genie.mcp.errors import ToolError, map_exc
 from genie.mcp.stages import next_stage_name, parse_stage
 from genie.mcp.tools.projects import create_project, get_project, list_presets
+from genie.mcp.tools.runs import get_run, run_stage, wait_for_run
 from genie.mcp.tools.setup import (
     get_settings,
     health,
@@ -16,6 +20,7 @@ from genie.mcp.tools.setup import (
     set_secret,
     update_settings,
 )
+from genie.models import Run
 from genie.pipeline.dispatch import StageError
 
 
@@ -167,3 +172,49 @@ def test_setup_register_is_idempotent(monkeypatch):
         "update_settings",
         "list_models",
     ]
+
+
+@pytest.mark.asyncio
+async def test_run_stage_rejects_review_and_export(genie_home):
+    p = create_project("quick-sft", "R", "brief")
+    with pytest.raises(ToolError) as ei:
+        await run_stage(p["id"], "review")
+    assert ei.value.code == "bad_stage"
+    with pytest.raises(ToolError) as ei:
+        await run_stage(p["id"], "export")
+    assert ei.value.code == "bad_stage"
+
+
+@pytest.mark.asyncio
+async def test_run_conflict_and_wait_timeout(genie_home, monkeypatch):
+    from genie.jobs.runner import RunConflict
+    from genie.pipeline import dispatch
+
+    p = create_project("quick-sft", "R2", "brief")
+    fake = FakeRunner()
+    monkeypatch.setattr(dispatch, "_runner", lambda: fake)
+    first = await run_stage(p["id"], "taxonomy")
+    assert "run_id" in first
+
+    class ConflictRunner:
+        async def start(self, **kwargs):
+            raise RunConflict(p["id"], first["run_id"], 1)
+
+    monkeypatch.setattr(dispatch, "_runner", lambda: ConflictRunner())
+    with pytest.raises(ToolError) as ei:
+        await run_stage(p["id"], 1)
+    assert ei.value.code == "run_conflict"
+    assert ei.value.payload()["run_id"] == first["run_id"]
+
+    class SlowRunner:
+        async def wait(self, run_id, timeout=30.0):
+            raise TimeoutError()
+
+        def run_summary(self, run_id):
+            return {"id": run_id, "status": "running", "done": 0, "total": 1}
+
+    monkeypatch.setattr("genie.mcp.tools.runs.runner", SlowRunner())
+    monkeypatch.setattr("genie.api.runs.runner", SlowRunner())
+    snap = await wait_for_run(first["run_id"], timeout_s=1)
+    assert snap["timed_out"] is True
+    assert snap["status"] == "running"
