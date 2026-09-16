@@ -9,6 +9,7 @@ from _fake_ctx import FakeRunner, make_project, seed_tree
 from genie import db, secrets
 from genie.mcp.errors import ToolError, map_exc
 from genie.mcp.stages import next_stage_name, parse_stage
+from genie.mcp.tools.inspect import get_stage_data
 from genie.mcp.tools.projects import create_project, get_project, list_presets
 from genie.mcp.tools.runs import get_run, resume_run, run_stage, wait_for_run
 from genie.mcp.tools.setup import (
@@ -80,6 +81,13 @@ def test_create_project_from_preset_next_stage_taxonomy(genie_home):
         "review",
         "export",
     }
+
+
+def test_get_stage_data_taxonomy_empty_tree(genie_home):
+    project = create_project("quick-sft", "Inspect", "brief")
+    data = get_stage_data(project["id"], "taxonomy")
+    assert "tree" in data
+    assert data["leaves"] == 0
 
 
 @pytest.mark.asyncio

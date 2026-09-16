@@ -56,8 +56,9 @@ def mount_mcp(app: FastAPI) -> None:
     from starlette.middleware import Middleware
     from starlette.routing import Mount
 
-    from .tools import projects, runs, setup
+    from .tools import inspect, projects, runs, setup
 
+    inspect.register()
     projects.register()
     runs.register()
     setup.register()
