@@ -9,8 +9,10 @@ from _fake_ctx import FakeRunner, make_project, seed_tree
 from genie import db, secrets
 from genie.mcp.errors import ToolError, map_exc
 from genie.mcp.stages import next_stage_name, parse_stage
+from genie.mcp.tools.export import export_dataset
 from genie.mcp.tools.inspect import get_stage_data
 from genie.mcp.tools.projects import create_project, get_project, list_presets
+from genie.mcp.tools.review import review_rows
 from genie.mcp.tools.runs import get_run, resume_run, run_stage, wait_for_run
 from genie.mcp.tools.setup import (
     get_settings,
@@ -180,6 +182,33 @@ def test_setup_register_is_idempotent(monkeypatch):
         "update_settings",
         "list_models",
     ]
+
+
+def test_review_rows_invalid_messages(genie_home):
+    from golden.seed import seed_project
+
+    with db.session_scope() as s:
+        project = seed_project(s, rows_per_leaf=1)
+        pid, rid = project.id, f"{project.slug}-leaf-paging-0001"
+    with pytest.raises(ToolError) as ei:
+        review_rows(pid, row_id=rid, messages=[{"role": "user", "content": "only user"}])
+    assert ei.value.code == "invalid_messages"
+
+
+def test_export_secret_leak(genie_home):
+    from golden.seed import seed_project
+
+    with db.session_scope() as s:
+        project = seed_project(s, rows_per_leaf=2, with_pairs=True)
+        project.domain_brief = "notes: my token is hf_abcdefghijklmnopqrstuvwxyz"
+        s.commit()
+        pid = project.id
+    with pytest.raises(ToolError) as ei:
+        export_dataset(pid, formats=["sft"])
+    assert ei.value.code == "secret_leak"
+    assert "hf_abcdefghijklmnopqrstuvwxyz" not in str(ei.value.payload())
+    exports = genie_home / "exports"
+    assert not exports.exists() or list(exports.rglob("*")) == []
 
 
 @pytest.mark.asyncio
