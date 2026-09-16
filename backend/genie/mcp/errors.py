@@ -1,20 +1,18 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 from fastapi import HTTPException
 
+from genie.api.settings import _SECRET_VALUE_RE
 from genie.pipeline.dispatch import StageError
 from genie.providers.openrouter import MissingApiKey
-
-_SECRET_RE = re.compile(r"sk-or-|hf_[A-Za-z0-9]{16,}")
 
 
 def _redact_secrets(value: Any) -> Any:
     if isinstance(value, str):
-        return _SECRET_RE.sub("[redacted]", value)
+        return _SECRET_VALUE_RE.sub("[redacted]", value)
     if isinstance(value, dict):
         return {key: _redact_secrets(item) for key, item in value.items()}
     if isinstance(value, list):

@@ -106,9 +106,17 @@ def test_map_exc_maps_run_conflict_without_argument_collision(exc):
 def test_map_exc_redacts_token_like_strings():
     with pytest.raises(ToolError) as ei:
         map_exc(HTTPException(400, "bad sk-or-v1-abcdefgh"))
-    assert "sk-or-" not in str(ei.value)
-    assert "sk-or-" not in str(ei.value.payload())
-    assert ei.value.message == "bad [redacted]v1-abcdefgh"
+    for secret in ("sk-or-", "v1-abcdefgh"):
+        assert secret not in str(ei.value)
+        assert secret not in str(ei.value.payload())
+    assert ei.value.message == "bad [redacted]"
+
+    with pytest.raises(ToolError) as ei:
+        map_exc(HTTPException(400, "bad hf_abcdefghijklmnopqrst"))
+    for secret in ("hf_", "abcdefghijklmnopqrst"):
+        assert secret not in str(ei.value)
+        assert secret not in str(ei.value.payload())
+    assert ei.value.message == "bad [redacted]"
 
 
 def test_setup_register_is_idempotent(monkeypatch):
