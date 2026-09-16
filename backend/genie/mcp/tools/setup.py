@@ -7,6 +7,8 @@ from genie.db import session_scope
 from genie.mcp.errors import fail, map_exc
 from genie.mcp.server import mcp
 
+_registered = False
+
 
 def health() -> dict[str, Any]:
     return {"ok": True, "version": __version__, "mcp": True}
@@ -61,9 +63,13 @@ async def list_models(search: str = "", refresh: bool = False) -> dict[str, Any]
 
 
 def register() -> None:
+    global _registered
+    if _registered:
+        return
     mcp.tool()(health)
     mcp.tool()(secrets_status)
     mcp.tool()(set_secret)
     mcp.tool()(get_settings)
     mcp.tool()(update_settings)
     mcp.tool()(list_models)
+    _registered = True

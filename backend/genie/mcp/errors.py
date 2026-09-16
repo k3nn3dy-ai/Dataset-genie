@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from fastapi import HTTPException
@@ -8,15 +9,29 @@ from fastapi import HTTPException
 from genie.pipeline.dispatch import StageError
 from genie.providers.openrouter import MissingApiKey
 
+_SECRET_RE = re.compile(r"sk-or-|hf_[A-Za-z0-9]{16,}")
+
+
+def _redact_secrets(value: Any) -> Any:
+    if isinstance(value, str):
+        return _SECRET_RE.sub("[redacted]", value)
+    if isinstance(value, dict):
+        return {key: _redact_secrets(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_secrets(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_secrets(item) for item in value)
+    return value
+
 
 class ToolError(Exception):
     """Raised by tools. `str(self)` is JSON `{code, message, ...extra}` for MCP isError."""
 
     def __init__(self, code: str, message: str, extra: dict[str, Any] | None = None) -> None:
         self.code = code
-        self.message = message
-        self.extra = extra or {}
-        super().__init__(json.dumps({"code": code, "message": message, **self.extra}))
+        self.message = _redact_secrets(message)
+        self.extra = _redact_secrets(extra or {})
+        super().__init__(json.dumps({"code": code, "message": self.message, **self.extra}))
 
     def payload(self) -> dict[str, Any]:
         return {"code": self.code, "message": self.message, **self.extra}

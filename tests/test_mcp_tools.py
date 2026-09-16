@@ -10,6 +10,7 @@ from genie.mcp.tools.setup import (
     get_settings,
     health,
     list_models,
+    register,
     secrets_status,
     set_secret,
     update_settings,
@@ -100,3 +101,40 @@ def test_map_exc_maps_run_conflict_without_argument_collision(exc):
         "message": "already running",
         "run_id": "run-1",
     }
+
+
+def test_map_exc_redacts_token_like_strings():
+    with pytest.raises(ToolError) as ei:
+        map_exc(HTTPException(400, "bad sk-or-v1-abcdefgh"))
+    assert "sk-or-" not in str(ei.value)
+    assert "sk-or-" not in str(ei.value.payload())
+    assert ei.value.message == "bad [redacted]v1-abcdefgh"
+
+
+def test_setup_register_is_idempotent(monkeypatch):
+    from genie.mcp.tools import setup
+
+    registered: list[str] = []
+
+    class FakeMcp:
+        def tool(self):
+            def decorate(function):
+                registered.append(function.__name__)
+                return function
+
+            return decorate
+
+    monkeypatch.setattr(setup, "mcp", FakeMcp())
+    monkeypatch.setattr(setup, "_registered", False)
+
+    register()
+    register()
+
+    assert registered == [
+        "health",
+        "secrets_status",
+        "set_secret",
+        "get_settings",
+        "update_settings",
+        "list_models",
+    ]
