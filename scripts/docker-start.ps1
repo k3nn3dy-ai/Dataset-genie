@@ -25,6 +25,23 @@ if (-not (Test-Path '.env')) {
     Copy-Item '.env.example' '.env'
     Write-Host 'Created .env from .env.example. Add your OpenRouter key there, or enter it later in Settings.'
 }
+$envLines = Get-Content '.env'
+$existing = $envLines | Where-Object { $_ -match '^GENIE_MCP_TOKEN=(.+)$' } | Select-Object -First 1
+$current = $null
+if ($existing) { $current = ($existing -split '=', 2)[1] }
+if (-not $current) {
+    $bytes = New-Object byte[] 32
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    $tok = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+','-').Replace('/','_')
+    if ($existing) {
+        $envLines = $envLines | ForEach-Object { if ($_ -match '^GENIE_MCP_TOKEN=') { "GENIE_MCP_TOKEN=$tok" } else { $_ } }
+    } else {
+        $envLines += "GENIE_MCP_TOKEN=$tok"
+    }
+    $envLines | Set-Content -Path '.env' -Encoding utf8
+    Write-Host "MCP token (save for your MCP client): $tok"
+    Write-Host 'Saved to .env. UI is still unauthenticated.'
+}
 $port = $env:GENIE_PORT
 if (-not $port) {
     $line = Get-Content '.env' -ErrorAction SilentlyContinue | Where-Object { $_ -match '^GENIE_PORT=(.+)$' } | Select-Object -First 1
