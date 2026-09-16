@@ -314,7 +314,7 @@ backend/genie/
   formats/     sft alpaca dpo tools grpo  validate.py (structural + chat-template checks)
   export.py    bundle, README.md (dataset card), generation_config.yaml, HF push
   api/         one router per resource under /api
-frontend/      Vite + React + TypeScript + Tailwind (lofi-cyberpunk shell, 10 screens)
+frontend/      Vite + React + TypeScript + Tailwind (light shell, 10 screens)
 tests/         pytest: golden JSONL fixtures, FakeOpenRouter, integration + adversarial runner tests
 scripts/       start/stop (native), docker-start/docker-stop (.sh, .ps1, .cmd), seed_demo.py, screenshots.ts
 docs/          user guide, screenshots

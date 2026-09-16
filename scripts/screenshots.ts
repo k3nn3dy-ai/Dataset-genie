@@ -29,7 +29,7 @@ const MOCK_PROJECT = process.env.MOCK_PROJECT ?? 'p_linux' // id of the richest 
 const WIDTH = 1600
 const HEIGHT = 1000
 const ONLY = new Set((process.env.ONLY ?? '').split(',').map((s) => s.trim()).filter(Boolean))
-const SETTLE_MS = Number(process.env.SETTLE_MS ?? 900) // let the lattice / glitch / rain reach a steady frame
+const SETTLE_MS = Number(process.env.SETTLE_MS ?? 500) // let cards and web fonts settle before capture
 
 const STAGE_FILES: Record<number, string> = {
   1: '02-taxonomy', 2: '03-prompts', 3: '04-responses', 4: '05-rejected',
@@ -65,13 +65,6 @@ async function settle(page: Page) {
     page.evaluate(() => (document as Document & { fonts: FontFaceSet }).fonts.ready),
     new Promise((r) => setTimeout(r, 5000)),
   ])
-  // wait until every web font we rely on is actually loaded (not just the API resolved)
-  await page.waitForFunction(() => {
-    const fs = (document as Document & { fonts: FontFaceSet }).fonts
-    // check the weights actually loaded from Google Fonts (700 / 500 / 400)
-    const want = ['bold 16px "Chakra Petch"', '500 16px "Rajdhani"', '16px "Share Tech Mono"']
-    return want.every((f) => fs.check(f))
-  }, undefined, { timeout: 8000 }).catch(() => console.warn('  (web fonts did not report ready; continuing)'))
   await page.waitForTimeout(SETTLE_MS)
 }
 
@@ -96,8 +89,8 @@ async function main() {
   const context = await browser.newContext({
     viewport: { width: WIDTH, height: HEIGHT },
     deviceScaleFactor: 1,
-    colorScheme: 'dark',
-    reducedMotion: 'no-preference',
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
   })
   const page = await context.newPage()
   const consoleErrors: string[] = []
