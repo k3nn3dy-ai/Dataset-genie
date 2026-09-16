@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .auth import McpAuthMiddleware
 
@@ -22,6 +23,18 @@ mcp = FastMCP(
         allowed_origins=["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
     ),
 )
+
+
+class McpBarePathMiddleware:
+    """Internally normalize the public /mcp endpoint without an HTTP redirect."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"] == "/mcp":
+            scope = {**scope, "path": "/mcp/", "raw_path": b"/mcp/"}
+        await self.app(scope, receive, send)
 
 
 def mcp_asgi():
@@ -50,6 +63,7 @@ def mount_mcp(app: FastAPI) -> None:
         middleware=[Middleware(McpAuthMiddleware)],
     )
     app.mount("/mcp", wrapped)
+    app.add_middleware(McpBarePathMiddleware)
 
 
 def combined_lifespan(app_lifespan):

@@ -51,7 +51,7 @@ def test_ensure_env_mcp_token_leaves_existing(tmp_path):
 
 
 def test_mcp_disabled_without_token(client):
-    r = client.post("/mcp", json=INIT, headers=MCP_HEADERS)
+    r = client.post("/mcp", json=INIT, headers=MCP_HEADERS, follow_redirects=False)
     assert r.status_code == 503
     assert r.json()["detail"] == "MCP disabled; set GENIE_MCP_TOKEN"
     assert client.get("/api/health").status_code == 200
@@ -63,11 +63,14 @@ def test_mcp_401_missing_and_wrong_token(genie_home, monkeypatch):
 
     config.reset_settings_cache()
     with TestClient(main.create_app()) as c:
-        assert c.post("/mcp", json=INIT, headers=MCP_HEADERS).status_code == 401
+        assert (
+            c.post("/mcp", json=INIT, headers=MCP_HEADERS, follow_redirects=False).status_code
+            == 401
+        )
         bad = {**MCP_HEADERS, "Authorization": "Bearer wrong-token-value-here"}
-        assert c.post("/mcp", json=INIT, headers=bad).status_code == 401
+        assert c.post("/mcp", json=INIT, headers=bad, follow_redirects=False).status_code == 401
         short = {**MCP_HEADERS, "Authorization": "Bearer x"}
-        r = c.post("/mcp", json=INIT, headers=short)
+        r = c.post("/mcp", json=INIT, headers=short, follow_redirects=False)
         assert r.status_code == 401
 
 
@@ -78,7 +81,7 @@ def test_mcp_initialize_with_token(genie_home, monkeypatch):
     config.reset_settings_cache()
     with TestClient(main.create_app()) as c:
         headers = {**MCP_HEADERS, "Authorization": "Bearer correct-token-value-here"}
-        r = c.post("/mcp", json=INIT, headers=headers)
+        r = c.post("/mcp", json=INIT, headers=headers, follow_redirects=False)
         assert r.status_code == 200
         assert "index.html" not in r.text
         assert "jsonrpc" in r.text or "Dataset Genie" in r.text or "protocolVersion" in r.text
