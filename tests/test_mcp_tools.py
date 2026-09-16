@@ -10,7 +10,7 @@ from genie import db, secrets
 from genie.mcp.errors import ToolError, map_exc
 from genie.mcp.stages import next_stage_name, parse_stage
 from genie.mcp.tools.projects import create_project, get_project, list_presets
-from genie.mcp.tools.runs import get_run, run_stage, wait_for_run
+from genie.mcp.tools.runs import get_run, resume_run, run_stage, wait_for_run
 from genie.mcp.tools.setup import (
     get_settings,
     health,
@@ -183,6 +183,22 @@ async def test_run_stage_rejects_review_and_export(genie_home):
     with pytest.raises(ToolError) as ei:
         await run_stage(p["id"], "export")
     assert ei.value.code == "bad_stage"
+
+
+@pytest.mark.asyncio
+async def test_resume_run_conflict_when_active(genie_home, monkeypatch):
+    from genie.pipeline import dispatch
+
+    p = create_project("quick-sft", "R3", "brief")
+    fake = FakeRunner()
+    monkeypatch.setattr(dispatch, "_runner", lambda: fake)
+    first = await run_stage(p["id"], "taxonomy")
+    assert "run_id" in first
+
+    with pytest.raises(ToolError) as ei:
+        await resume_run(first["run_id"])
+    assert ei.value.code == "run_conflict"
+    assert ei.value.payload()["run_id"] == first["run_id"]
 
 
 @pytest.mark.asyncio

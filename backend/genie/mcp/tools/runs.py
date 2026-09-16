@@ -83,7 +83,7 @@ async def cancel_run(run_id: str) -> dict[str, Any]:
 async def resume_run(run_id: str, force: bool = False) -> dict[str, Any]:
     import importlib
 
-    from genie.jobs.runner import RunConflict
+    from genie.jobs.runner import ACTIVE_RUN_STATUSES, RunConflict
     from genie.models import Run
     from genie.providers.openrouter import MissingApiKey, OpenRouterError
 
@@ -92,7 +92,7 @@ async def resume_run(run_id: str, force: bool = False) -> dict[str, Any]:
         if run is None:
             fail("not_found", f"run {run_id!r} not found")
         stage, status = run.stage, run.status
-    if status == "running":
+    if status in ACTIVE_RUN_STATUSES:
         fail("run_conflict", "run is already running", run_id=run_id, stage=stage)
     registry = importlib.import_module("genie.pipeline.registry")
     handler = registry.get_handler(stage)
