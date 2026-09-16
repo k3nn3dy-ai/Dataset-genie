@@ -16,14 +16,14 @@ interface Props {
 
 export function Slider({ label, value, onChange, min = 0, max = 100, step = 1, format, className, disabled, tone = 'green' }: Props) {
   const fill = ((value - min) / (max - min)) * 100
-  const colour = tone === 'green' ? '#22e35a' : tone === 'steel' ? '#b3b3b3' : '#ffa040'
-  const style = { '--fill': `${fill}%`, background: `linear-gradient(90deg, ${colour} ${fill}%, #3a3a3a ${fill}%)` } as CSSProperties
+  const colour = tone === 'green' ? '#0071E3' : tone === 'steel' ? '#86868B' : '#FF9F0A'
+  const style = { '--fill': `${fill}%`, background: `linear-gradient(90deg, ${colour} ${fill}%, #E5E5EA ${fill}%)` } as CSSProperties
   return (
     <div className={clsx('flex flex-col gap-1.5', disabled && 'opacity-40', className)}>
       {(label || format) && (
         <div className="flex items-center justify-between gap-2">
           {label && <span className="label">{label}</span>}
-          <span className="font-mono text-[12px] text-green tabular-nums">{format ? format(value) : value}</span>
+          <span className="font-ui text-[12px] text-green tabular-nums font-medium">{format ? format(value) : value}</span>
         </div>
       )}
       <input

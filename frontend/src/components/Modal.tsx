@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, IconButton } from './Button'
 
 interface Props { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: 'sm' | 'md' | 'lg'; tone?: 'default' | 'amber' | 'red' }
@@ -14,20 +15,21 @@ export function Modal({ open, onClose, title, children, footer, width = 'md', to
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
   if (!open) return null
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-6" role="dialog" aria-modal>
-      <div className="absolute inset-0 bg-bg/70 backdrop-blur-sm" onClick={onClose} />
-      <div className={clsx('panel relative w-full modal-in flex flex-col max-h-[86vh]', W[width], tone === 'amber' && 'border-amber/50', tone === 'red' && 'border-red/50')}>
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className={clsx('relative z-10 w-full bg-surface1 rounded-card shadow-glow border border-line modal-in flex flex-col max-h-[86vh]', W[width], tone === 'amber' && 'border-amber/50', tone === 'red' && 'border-red/50')}>
         <header className="flex items-center justify-between px-5 h-12 border-b border-line">
           <div className="flex items-baseline gap-2">
-            <h2 className="font-display font-bold uppercase text-[15px] tracking-[.06em]">{title}</h2>
+            <h2 className="font-display font-semibold text-[15px] tracking-[-0.015em]">{title}</h2>
           </div>
           <IconButton icon="x" label="Close" size="sm" onClick={onClose} />
         </header>
         <div className="p-5 overflow-y-auto">{children}</div>
         {footer && <footer className="flex items-center justify-end gap-2 px-5 h-14 border-t border-line">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

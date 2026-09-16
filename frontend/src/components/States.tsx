@@ -8,11 +8,11 @@ interface EmptyProps { icon?: IconName; title: string; body?: ReactNode; action?
 export function EmptyState({ icon = 'sparkle', title, body, action, className }: EmptyProps) {
   return (
     <div className={clsx('panel flex flex-col items-center justify-center text-center gap-3 px-8 py-14 border-dashed', className)}>
-      <div className="w-12 h-12 rounded-card border border-green/40 flex items-center justify-center text-green shadow-[0_0_20px_rgba(34,227,90,.15)]">
+      <div className="w-12 h-12 rounded-full bg-green/8 text-green flex items-center justify-center">
         <Icon name={icon} size={22} />
       </div>
       <div>
-        <div className="font-display font-bold uppercase text-[15px] tracking-[.06em]">{title}</div>
+        <div className="font-display font-semibold text-[15px] tracking-[-0.015em]">{title}</div>
       </div>
       {body && <p className="text-muted text-[13.5px] max-w-[380px] leading-relaxed">{body}</p>}
       {action && <Button variant="primary" icon={action.icon ?? 'play'} onClick={action.onClick} className="mt-1">{action.label}</Button>}
@@ -24,10 +24,10 @@ export function ErrorState({ title = 'Something failed', error, onRetry, classNa
   const msg = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'
   return (
     <div className={clsx('panel border-red/40 flex flex-col items-center text-center gap-3 px-8 py-12', className)} role="alert">
-      <div className="w-12 h-12 rounded-card border border-red/50 flex items-center justify-center text-red">
+      <div className="w-12 h-12 rounded-full bg-red/8 text-red flex items-center justify-center">
         <Icon name="warning" size={22} />
       </div>
-      <div className="font-display font-bold uppercase text-[15px] tracking-[.06em] text-red">{title}</div>
+      <div className="font-display font-semibold text-[15px] tracking-[-0.015em] text-red">{title}</div>
       <pre className="font-mono text-[11.5px] text-muted whitespace-pre-wrap max-w-[520px]">{msg}</pre>
       {onRetry && <Button variant="outline" icon="refresh" onClick={onRetry}>Retry</Button>}
     </div>
@@ -36,7 +36,7 @@ export function ErrorState({ title = 'Something failed', error, onRetry, classNa
 
 export function Spinner({ className, label = 'Loading' }: { className?: string; label?: string }) {
   return (
-    <div className={clsx('flex items-center gap-2 text-muted font-mono text-[11px] uppercase tracking-[.14em]', className)}>
+    <div className={clsx('flex items-center gap-2 text-muted font-ui text-[12px]', className)}>
       <Icon name="refresh" size={13} className="animate-spin text-green" />
       {label}
     </div>

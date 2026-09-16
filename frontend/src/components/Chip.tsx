@@ -22,8 +22,8 @@ export function Chip({ children, tone = 'default', className, onClick, onRemove,
     <Tag
       type={onClick ? 'button' : undefined} onClick={onClick} title={title}
       className={clsx(
-        'inline-flex items-center gap-1 h-[20px] px-1.5 rounded-chip border font-mono text-[10.5px] tracking-[.06em] uppercase whitespace-nowrap leading-none',
-        TONE[tone], onClick && 'cursor-pointer hover:brightness-125 focus-ring', active && 'ring-1 ring-green/70', className,
+        'inline-flex items-center gap-1 h-[22px] px-2 rounded-chip border font-ui text-[11px] font-medium whitespace-nowrap leading-none',
+        TONE[tone], onClick && 'cursor-pointer hover:bg-black/[.03] focus-ring', active && 'ring-1 ring-green/40', className,
       )}
     >
       {children}

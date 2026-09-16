@@ -16,7 +16,7 @@ export function Histogram({ bins, threshold, height = 140, className, mean }: { 
     <div className={clsx('relative w-full', className)}>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label="Score histogram">
         {[0.25, 0.5, 0.75, 1].map((g) => (
-          <line key={g} x1={0} x2={W} y1={padT + (H - padT - padB) * (1 - g)} y2={padT + (H - padT - padB) * (1 - g)} stroke="#262626" strokeWidth={1} />
+          <line key={g} x1={0} x2={W} y1={padT + (H - padT - padB) * (1 - g)} y2={padT + (H - padT - padB) * (1 - g)} stroke="#E5E5EA" strokeWidth={1} />
         ))}
         {bins.map((v, i) => {
           const h = ((H - padT - padB) * v) / max
@@ -26,26 +26,26 @@ export function Histogram({ bins, threshold, height = 140, className, mean }: { 
               <rect x={i * bw} y={padT} width={bw} height={H - padT - padB} fill="transparent" />
               <rect
                 x={i * bw + 3} y={H - padB - h} width={bw - 6} height={h} rx={2}
-                fill={below ? 'rgba(34,227,90,.28)' : '#22e35a'} opacity={hover === null || hover === i ? 1 : 0.55}
-                style={{ filter: hover === i ? 'drop-shadow(0 0 6px rgba(34,227,90,.7))' : undefined }}
+                fill={below ? 'rgba(0,113,227,.22)' : '#0071E3'} opacity={hover === null || hover === i ? 1 : 0.55}
+                style={{ filter: hover === i ? 'drop-shadow(0 1px 2px rgba(0,113,227,.25))' : undefined }}
               />
             </g>
           )
         })}
         {threshold !== undefined && (
           <g>
-            <line x1={x(threshold)} x2={x(threshold)} y1={padT - 4} y2={H - padB + 4} stroke="#ffa040" strokeWidth={1.5} strokeDasharray="4 3" />
-            <text x={x(threshold) + 4} y={padT - 18} fill="#ffa040" fontFamily="Share Tech Mono" fontSize={10}>THR {threshold.toFixed(1)}</text>
+            <line x1={x(threshold)} x2={x(threshold)} y1={padT - 4} y2={H - padB + 4} stroke="#FF9F0A" strokeWidth={1.5} strokeDasharray="4 3" />
+            <text x={x(threshold) + 4} y={padT - 18} fill="#FF9F0A" fontFamily="Inter, -apple-system, sans-serif" fontSize={10}>THR {threshold.toFixed(1)}</text>
           </g>
         )}
         {mean !== undefined && (
           <g>
-            <line x1={x(mean)} x2={x(mean)} y1={padT - 4} y2={H - padB} stroke="#b3b3b3" strokeWidth={1} />
-            <text x={x(mean) + 4} y={padT - 6} fill="#b3b3b3" fontFamily="Share Tech Mono" fontSize={10} textAnchor={mean > 4.2 ? 'end' : 'start'} dx={mean > 4.2 ? -8 : 0}>MEAN {mean.toFixed(2)}</text>
+            <line x1={x(mean)} x2={x(mean)} y1={padT - 4} y2={H - padB} stroke="#86868B" strokeWidth={1} />
+            <text x={x(mean) + 4} y={padT - 6} fill="#86868B" fontFamily="Inter, -apple-system, sans-serif" fontSize={10} textAnchor={mean > 4.2 ? 'end' : 'start'} dx={mean > 4.2 ? -8 : 0}>MEAN {mean.toFixed(2)}</text>
           </g>
         )}
         {[0, 1, 2, 3, 4, 5].map((t) => (
-          <text key={t} x={x(t)} y={H - 6} fill="#9a9a9a" fontFamily="Share Tech Mono" fontSize={10} textAnchor={t === 0 ? 'start' : t === 5 ? 'end' : 'middle'}>{t}</text>
+          <text key={t} x={x(t)} y={H - 6} fill="#8E8E93" fontFamily="Inter, -apple-system, sans-serif" fontSize={10} textAnchor={t === 0 ? 'start' : t === 5 ? 'end' : 'middle'}>{t}</text>
         ))}
       </svg>
       {hover !== null && (

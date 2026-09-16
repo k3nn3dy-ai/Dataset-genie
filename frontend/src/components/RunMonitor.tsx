@@ -71,8 +71,8 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
             <StatTile size="sm" label="refusal rate" value={pct(refPct, 1)} tone={refPct > 10 ? 'amber' : 'default'} />
             <StatTile size="sm" label="errors" value={snap.errors} tone={snap.errors > 0 ? 'red' : 'default'} hint={`spend ${usd(snap.spend_usd)}`} />
           </div>
-          <div className="h-1.5 rounded-full bg-bg/70 border border-line overflow-hidden">
-            <div className={clsx('h-full transition-all duration-300', live ? 'bg-ok shadow-[0_0_10px_rgba(245,245,245,.6)]' : snap.status === 'done' ? 'bg-green' : 'bg-red')} style={{ width: `${p}%` }} />
+          <div className="h-1.5 rounded-full bg-surface2 overflow-hidden">
+            <div className={clsx('h-full transition-all duration-300', live ? 'bg-green' : snap.status === 'done' ? 'bg-ok' : 'bg-red')} style={{ width: `${p}%` }} />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="label">workers</span>
@@ -94,7 +94,7 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
       <div className="p-3 min-h-[160px]">
         {tab === 'results' ? results : (
           <div className="flex flex-col gap-3">
-            <div className="rounded-btn border border-line bg-bg/60 max-h-[220px] overflow-y-auto p-2 font-mono text-[11px] leading-[1.5]">
+            <div className="rounded-btn border border-line bg-surface2 max-h-[220px] overflow-y-auto p-2 font-mono text-[11px] leading-[1.5]">
               {(snap?.log ?? []).length === 0 && <div className="text-dim">No events yet.</div>}
               {(snap?.log ?? []).map((l, i) => (
                 <div key={i} className="flex gap-2">
@@ -105,7 +105,7 @@ export function RunMonitor({ runId, results, resultsCount, onFinished, className
               ))}
             </div>
             {log.data && log.data.items.length > 0 && (
-              <div className="rounded-btn border border-line bg-bg/60 max-h-[200px] overflow-auto">
+              <div className="rounded-btn border border-line bg-surface2 max-h-[200px] overflow-auto">
                 <table className="w-full font-mono text-[11px]">
                   <thead className="sticky top-0 bg-surface2"><tr className="label !text-[9.5px]"><th className="px-2 py-1 text-left">ts</th><th className="px-2 py-1 text-left">model</th><th className="px-2 py-1 text-left">target</th><th className="px-2 py-1 text-right">in/out</th><th className="px-2 py-1 text-right">ms</th><th className="px-2 py-1 text-right">$</th><th className="px-2 py-1">status</th></tr></thead>
                   <tbody>

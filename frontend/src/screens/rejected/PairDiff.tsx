@@ -10,7 +10,7 @@ export function PairDiff({ pair }: { pair: Pair }) {
   const diff = useMemo(() => wordDiff(chosen, rejected), [chosen, rejected])
   const prompt = pair.prompt.filter((m) => m.role === 'user').at(-1)?.content ?? ''
   return (
-    <div className="rounded-card border border-line bg-bg/40 flex flex-col">
+    <div className="rounded-card border border-line bg-surface2 flex flex-col">
       <div className="px-3 py-2 border-b border-line flex items-start gap-3">
         <span className="label mt-0.5 shrink-0">prompt</span>
         <p className="text-[12.5px] text-muted leading-snug line-clamp-2 flex-1">{prompt}</p>

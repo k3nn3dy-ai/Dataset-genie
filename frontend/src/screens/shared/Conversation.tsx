@@ -3,10 +3,10 @@ import type { Message } from '../../lib/types'
 import { Textarea } from '../../components'
 
 const ROLE: Record<Message['role'], { label: string; cls: string; bubble: string }> = {
-  system: { label: 'system', cls: 'text-dim', bubble: 'border-line bg-bg/40 text-muted' },
+  system: { label: 'system', cls: 'text-dim', bubble: 'border-line bg-surface2 text-muted' },
   user: { label: 'user', cls: 'text-steel', bubble: 'border-steel/35 bg-steel/5' },
   assistant: { label: 'assistant', cls: 'text-green', bubble: 'border-green/35 bg-green/5' },
-  tool: { label: 'tool', cls: 'text-amber', bubble: 'border-amber/35 bg-bg/60 font-mono text-[11.5px]' },
+  tool: { label: 'tool', cls: 'text-amber', bubble: 'border-amber/35 bg-surface2 font-mono text-[11.5px]' },
 }
 
 interface Props {
@@ -35,7 +35,7 @@ export function Conversation({ messages, editable, onEdit, compact, className }:
               m.content && <div className={clsx('whitespace-pre-wrap leading-relaxed text-text/90', compact ? 'text-[12.5px]' : 'text-[13.5px]', m.role === 'tool' && 'font-mono')}>{m.content}</div>
             )}
             {m.tool_calls?.map((tc) => (
-              <pre key={tc.id} className="mt-2 rounded-btn border border-amber/30 bg-bg/70 p-2 font-mono text-[11px] text-amber/90 overflow-x-auto">
+              <pre key={tc.id} className="mt-2 rounded-btn border border-amber/30 bg-surface2 p-2 font-mono text-[11px] text-amber/90 overflow-x-auto">
                 {`${tc.function.name}(${tc.function.arguments})`}
               </pre>
             ))}

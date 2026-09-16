@@ -51,7 +51,7 @@ export function NewProjectModal({ open, onClose }: { open: boolean; onClose: () 
                 const on = types.includes(d.key)
                 return (
                   <button key={d.key} type="button" onClick={() => toggleType(d.key)} className={clsx('flex items-center justify-between px-3 h-10 rounded-btn border text-left transition-colors focus-ring', on ? 'border-green/60 bg-green/10' : 'border-line hover:border-line2')}>
-                    <span className="flex flex-col leading-tight"><span className={clsx('font-display font-bold uppercase text-[12px] tracking-[.06em]', on ? 'text-green' : 'text-text')}>{d.label}</span><span className="font-mono text-[10px] text-dim">{d.hint}</span></span>
+                    <span className="flex flex-col leading-tight"><span className={clsx('font-ui font-semibold text-[13px] tracking-[-0.01em]', on ? 'text-green' : 'text-text')}>{d.label}</span><span className="text-[11px] text-dim">{d.hint}</span></span>
                     <span className={clsx('w-3.5 h-3.5 rounded-[3px] border', on ? 'bg-green border-green' : 'border-line2')} />
                   </button>
                 )
@@ -66,8 +66,8 @@ export function NewProjectModal({ open, onClose }: { open: boolean; onClose: () 
           {presets.data?.map((p) => {
             const on = p.id === preset
             return (
-              <button key={p.id} type="button" onClick={() => setPreset(p.id)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring', on ? 'border-green/60 bg-green/10 shadow-[0_0_18px_rgba(34,227,90,.08)]' : 'border-line hover:border-line2')}>
-                <div className={clsx('font-display font-bold uppercase text-[12.5px] tracking-[.05em]', on && 'text-green')}>{p.name}</div>
+              <button key={p.id} type="button" onClick={() => setPreset(p.id)} className={clsx('text-left rounded-card border p-3 transition-colors focus-ring', on ? 'border-green/40 bg-green/8' : 'border-line hover:border-line2')}>
+                <div className={clsx('font-ui font-semibold text-[13px] tracking-[-0.01em]', on && 'text-green')}>{p.name}</div>
                 <div className="text-[12px] text-muted leading-snug mt-1">{p.description}</div>
                 <div className="flex gap-1 mt-2">{p.data_types.map((t) => <Chip key={t} tone={on ? 'green' : 'dim'}>{t}</Chip>)}</div>
               </button>

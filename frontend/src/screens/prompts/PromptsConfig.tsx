@@ -7,7 +7,7 @@ export function PersonaEditor({ personas, onChange }: { personas: Persona[]; onC
   return (
     <div className="flex flex-col gap-3">
       {personas.map((p, i) => (
-        <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
+        <div key={i} className="rounded-btn border border-line bg-surface2 p-2.5 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <Input mono={false} value={p.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Persona name" className="!h-8 flex-1" />
             <span className="font-mono text-[12px] text-green tabular-nums w-10 text-right">{p.weight}%</span>

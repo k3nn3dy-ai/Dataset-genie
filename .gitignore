@@ -14,3 +14,6 @@ docs/screenshots/*.tmp.png
 
 # local env for docker compose (copy of .env.example with real tokens)
 .env
+
+# Superdesign temp HTML for canvas uploads
+.superdesign/tmp/

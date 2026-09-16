@@ -24,11 +24,11 @@ export function StatTile({ label, value, unit, delta, deltaTone = 'default', ton
     <div className={clsx('panel px-3.5 py-3 flex flex-col gap-1 min-w-0', className)}>
       <div className="label truncate">{label}</div>
       <div className="flex items-baseline gap-1.5 min-w-0">
-        <span className={clsx('font-mono tabular-nums leading-none truncate', size === 'md' ? 'text-[26px]' : 'text-[19px]', VALUE_TONE[tone])}>{value}</span>
-        {unit && <span className="font-mono text-[11px] text-muted">{unit}</span>}
-        {delta && <span className={clsx('font-mono text-[11px] ml-auto', VALUE_TONE[deltaTone])}>{delta}</span>}
+        <span className={clsx('font-ui tabular-nums leading-none truncate font-semibold tracking-[-0.02em]', size === 'md' ? 'text-[24px]' : 'text-[18px]', VALUE_TONE[tone])}>{value}</span>
+        {unit && <span className="font-ui text-[11px] text-muted">{unit}</span>}
+        {delta && <span className={clsx('font-ui text-[11px] ml-auto', VALUE_TONE[deltaTone])}>{delta}</span>}
       </div>
-      {hint && <div className="font-mono text-[10.5px] text-dim truncate">{hint}</div>}
+      {hint && <div className="font-ui text-[11px] text-dim truncate">{hint}</div>}
     </div>
   )
 }

@@ -45,7 +45,7 @@ function NodeRow({ node, index, siblings, taskTypes, maxDepth, onUpdate, onMove,
           </>
         )}
         {!node.is_leaf && <span className="font-mono text-[10px] text-dim">{countLeaves(node)} leaves</span>}
-        {node.depth === 1 && <Toggle size="sm" tone="amber" checked={node.is_negative} onChange={(v) => onUpdate(node.id, (n) => setNegative(n, v))} label={<span className="font-mono text-[10px] uppercase tracking-[.1em] text-muted">neg</span>} className="!gap-1.5" />}
+        {node.depth === 1 && <Toggle size="sm" tone="amber" checked={node.is_negative} onChange={(v) => onUpdate(node.id, (n) => setNegative(n, v))} label={<span className="text-[11px] font-medium text-muted">Neg</span>} className="!gap-1.5" />}
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
           <IconButton icon="chevron" label="Move up" size="sm" className="-rotate-90 !h-6 !w-6" disabled={index === 0} onClick={() => onMove(-1)} />
           <IconButton icon="chevron" label="Move down" size="sm" className="rotate-90 !h-6 !w-6" disabled={index === siblings - 1} onClick={() => onMove(1)} />

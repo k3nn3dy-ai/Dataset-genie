@@ -59,7 +59,7 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
           <Icon name="chevron" size={12} className={clsx('text-muted transition-transform', open ? '-rotate-90' : 'rotate-90')} />
         </button>
         {open && (
-          <div className="absolute z-40 left-0 right-0 mt-1 panel !bg-surface2 shadow-[0_18px_40px_rgba(0,0,0,.6)] overflow-hidden modal-in">
+          <div className="absolute z-40 left-0 right-0 mt-1 panel !bg-surface1 shadow-glow overflow-hidden modal-in">
             <div className="p-2 border-b border-line flex items-center gap-2">
               <Icon name="search" size={13} className="text-muted" />
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search slug or name…" className="bg-transparent outline-none flex-1 font-mono text-[12px] placeholder:text-dim" />
@@ -97,7 +97,7 @@ export function ModelPicker({ value, onChange, label, compact, className, warn }
             temp {value.temperature} · max {value.max_tokens}{value.provider_order.length ? ` · pin ${value.provider_order[0]}` : ''}
           </button>
           {adv && (
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-btn border border-line bg-bg/40">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-btn border border-line bg-surface2">
               <Slider label="temperature" value={value.temperature} min={0} max={2} step={0.05} onChange={(t) => onChange({ ...value, temperature: t })} format={(v) => v.toFixed(2)} className="col-span-2" />
               <div className="flex flex-col gap-1.5"><span className="label">max tokens</span><NumberInput value={value.max_tokens} min={64} max={32000} step={64} onChange={(v) => onChange({ ...value, max_tokens: v })} /></div>
               <div className="flex flex-col gap-1.5"><span className="label">pin provider</span>

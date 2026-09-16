@@ -27,7 +27,7 @@ export function JudgeScreen() {
       <Panel title="Rubric" actions={<span className={`font-mono text-[10px] ${rubricTotal === 100 ? 'text-ok' : 'text-amber'}`}>weights {rubricTotal} / 100</span>}>
         <div className="flex flex-col gap-3">
           {draft.rubric.map((c, i) => (
-            <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
+            <div key={i} className="rounded-btn border border-line bg-surface2 p-2.5 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Input mono={false} value={c.name} onChange={(e) => setDraft({ rubric: draft.rubric.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} className="!h-7 flex-1 !font-semibold" />
                 <span className="font-mono text-[12px] text-green tabular-nums w-10 text-right">{c.weight}</span>
