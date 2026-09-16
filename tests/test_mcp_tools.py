@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from genie import secrets
 from genie.mcp.errors import ToolError, map_exc
 from genie.mcp.stages import next_stage_name, parse_stage
+from genie.mcp.tools.projects import create_project, get_project, list_presets
 from genie.mcp.tools.setup import (
     get_settings,
     health,
@@ -54,6 +55,26 @@ def test_next_stage_name_prefers_running():
     for s in stages:
         s["status"] = "done"
     assert next_stage_name(stages) is None
+
+
+def test_create_project_from_preset_next_stage_taxonomy(genie_home):
+    keys = {p["key"] for p in list_presets()}
+    assert "quick-sft" in keys
+    project = create_project(preset="quick-sft", name="Agent Demo", domain_brief="Linux on-call")
+    assert project["preset"] == "quick-sft"
+    assert project["name"] == "Agent Demo"
+    got = get_project(project["id"])
+    assert got["next_stage"] == "taxonomy"
+    assert {s["name"] for s in got["stages"]} == {
+        "taxonomy",
+        "prompts",
+        "responses",
+        "preferences",
+        "judge",
+        "filters",
+        "review",
+        "export",
+    }
 
 
 @pytest.mark.asyncio
