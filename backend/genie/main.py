@@ -27,7 +27,13 @@ async def _lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Dataset Genie", version=__version__, lifespan=_lifespan)
+    from .mcp.server import combined_lifespan, mount_mcp
+
+    app = FastAPI(
+        title="Dataset Genie",
+        version=__version__,
+        lifespan=combined_lifespan(_lifespan),
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -41,6 +47,8 @@ def create_app() -> FastAPI:
 
     for router in all_routers():
         app.include_router(router)
+
+    mount_mcp(app)
 
     if FRONTEND_DIST.exists():
         app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
