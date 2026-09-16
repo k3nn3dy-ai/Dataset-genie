@@ -59,9 +59,9 @@ export function MonoTable<T>({ rows, columns, rowKey, onRowClick, activeKey, sel
   const cell = dense ? 'px-2.5 py-[5px]' : 'px-3 py-2'
 
   return (
-    <div className={clsx('overflow-auto rounded-card border border-line bg-bg/40', className)} style={{ maxHeight }}>
+    <div className={clsx('overflow-auto rounded-card border border-line bg-surface1', className)} style={{ maxHeight }}>
       <table className="w-full border-collapse font-mono text-[12px] leading-tight">
-        <thead className="sticky top-0 z-10 bg-surface2 backdrop-blur-md">
+        <thead className="sticky top-0 z-10 bg-surface2">
           <tr className="border-b border-line2">
             {selectable && (
               <th className={clsx(cell, 'w-8')}>
@@ -99,7 +99,7 @@ export function MonoTable<T>({ rows, columns, rowKey, onRowClick, activeKey, sel
                 className={clsx(
                   'border-b border-line/70 last:border-b-0 transition-colors',
                   onRowClick && 'cursor-pointer hover:bg-green/5',
-                  activeKey === k && 'bg-green/10 shadow-[inset_2px_0_0_#22e35a]',
+                  activeKey === k && 'bg-green/8 shadow-[inset_2px_0_0_#0071E3]',
                   isSel && 'bg-green/10',
                   tone === 'amber' && 'text-amber/90', tone === 'red' && 'text-red/90', tone === 'dim' && 'text-dim',
                 )}
@@ -135,7 +135,7 @@ export function Check({ checked, onChange, className }: { checked: boolean; onCh
   return (
     <button
       type="button" role="checkbox" aria-checked={checked} onClick={onChange}
-      className={clsx('w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center transition-colors focus-ring', checked ? 'bg-green border-green text-bg' : 'border-line2 bg-bg/60 hover:border-green/60', className)}
+      className={clsx('w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center transition-colors focus-ring', checked ? 'bg-green border-green text-white' : 'border-line2 bg-surface1 hover:border-green/50', className)}
     >
       {checked && <Icon name="check" size={10} strokeWidth={3} />}
     </button>

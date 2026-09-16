@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 interface Props { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; hint?: ReactNode; disabled?: boolean; className?: string; size?: 'sm' | 'md'; tone?: 'green' | 'ok' | 'amber' }
 
-const TONE = { green: 'bg-green shadow-glow', ok: 'bg-ok shadow-[0_0_14px_rgba(245,245,245,.5)]', amber: 'bg-amber shadow-[0_0_14px_rgba(255,160,64,.5)]' }
+const TONE = { green: 'bg-green', ok: 'bg-ok', amber: 'bg-amber' }
 
 export function Toggle({ checked, onChange, label, hint, disabled, className, size = 'md', tone = 'green' }: Props) {
   const w = size === 'md' ? 'w-10 h-[22px]' : 'w-8 h-[18px]'
@@ -13,9 +13,9 @@ export function Toggle({ checked, onChange, label, hint, disabled, className, si
     <label className={clsx('flex items-center gap-3 select-none', disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer', className)}>
       <button
         type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
-        className={clsx('relative rounded-full border transition-colors shrink-0 focus-ring', w, checked ? clsx('border-transparent', TONE[tone]) : 'bg-bg/70 border-line2')}
+        className={clsx('relative rounded-full border transition-colors shrink-0 focus-ring', w, checked ? clsx('border-transparent', TONE[tone]) : 'bg-surface2 border-line2')}
       >
-        <span className={clsx('absolute top-[2px] left-[2px] rounded-full transition-transform', knob, checked ? clsx('bg-bg', shift) : 'bg-muted')} />
+        <span className={clsx('absolute top-[2px] left-[2px] rounded-full transition-transform shadow-sm', knob, checked ? clsx('bg-white', shift) : 'bg-white')} />
       </button>
       {(label || hint) && (
         <span className="flex flex-col min-w-0">

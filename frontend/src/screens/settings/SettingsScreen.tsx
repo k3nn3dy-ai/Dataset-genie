@@ -62,7 +62,7 @@ export function SettingsScreen() {
             {modelsWarning && <Banner tone="amber" className="mb-4">{modelsWarning}</Banner>}
             <div className="grid grid-cols-2 gap-4">
               {STAGE_SLOTS.map((s) => (
-                <div key={s.key} className="rounded-card border border-line bg-bg/40 p-3">
+                <div key={s.key} className="rounded-card border border-line bg-surface2 p-3">
                   <ModelPicker compact label={s.label} value={draft.default_models[s.key]} onChange={(m) => set({ default_models: { ...draft.default_models, [s.key]: m } })} />
                 </div>
               ))}

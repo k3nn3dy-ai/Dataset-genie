@@ -55,7 +55,7 @@ export function EstimateModal({ open, onClose, onConfirm, estimate, loading, err
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between label"><span>budget after run</span><span className={over ? 'text-amber' : 'text-text'}>{usd(after)} / {usd(cap)}</span></div>
-            <div className="h-2 rounded-full bg-bg/70 border border-line overflow-hidden relative">
+            <div className="h-2 rounded-full bg-surface2 border border-line overflow-hidden relative">
               <div className="absolute inset-y-0 left-0 bg-dim/60" style={{ width: `${Math.min(100, (spend / cap) * 100)}%` }} />
               <div className={over ? 'absolute inset-y-0 bg-amber' : 'absolute inset-y-0 bg-green'} style={{ left: `${Math.min(100, (spend / cap) * 100)}%`, width: `${Math.min(100 - (spend / cap) * 100, ((estimate.est_usd) / cap) * 100)}%` }} />
             </div>

@@ -70,7 +70,7 @@ export function PromptsScreen() {
       </div>
       <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-1">
         {grouped.map(([leafId, ps]) => (
-          <div key={leafId} className="rounded-card border border-line bg-bg/40">
+          <div key={leafId} className="rounded-card border border-line bg-surface2">
             <div className="flex items-center justify-between px-3 h-9 border-b border-line">
               <button type="button" onClick={() => setLeafFilter(leafId)} className="font-mono text-[11px] text-left truncate hover:text-green"><span className="text-dim">{ps[0].leaf_path.slice(0, -1).join(' / ')} / </span><span className="text-text">{ps[0].leaf_path.at(-1)}</span></button>
               <div className="flex items-center gap-2 shrink-0">

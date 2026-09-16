@@ -17,7 +17,7 @@ export function EnsembleEditor({ cfg, onChange }: { cfg: ResponsesConfig; onChan
         <Segmented options={[{ key: 'round-robin', label: 'Round-robin' }, { key: 'weighted', label: 'Weighted' }]} value={cfg.selection} onChange={(selection) => onChange({ selection })} />
       </div>
       {cfg.ensemble.map((s, i) => (
-        <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
+        <div key={i} className="rounded-btn border border-line bg-surface2 p-2.5 flex flex-col gap-2">
           <div className="flex items-start gap-2">
             <ModelPicker value={s} onChange={(v) => setSlot(i, v)} className="flex-1" />
             <IconButton icon="trash" label="Remove model" size="sm" disabled={cfg.ensemble.length === 1} onClick={() => onChange({ ensemble: cfg.ensemble.filter((_, k) => k !== i) })} />

@@ -25,7 +25,7 @@ export function RowDrawer({ projectId, rowId, onClose, onNav }: Props) {
   const save = () => { if (messages) patch.mutate({ rid: rowId, messages: messages.map((m) => (m.role === 'assistant' && m.content ? { ...m, content: m.content.replace(/\s+$/, '') } : m)) }, { onSuccess: () => { setEditing(false); setMessages(null) } }) }
 
   return (
-    <aside className="fixed top-0 right-0 bottom-0 z-[70] w-[620px] max-w-[60vw] panel !rounded-none border-l border-green/30 shadow-[-20px_0_60px_rgba(0,0,0,.6)] flex flex-col drawer-in">
+    <aside className="fixed top-0 right-0 bottom-0 z-[70] w-[620px] max-w-[60vw] panel !rounded-none border-l border-line shadow-glow flex flex-col drawer-in">
       <header className="flex items-center gap-2 px-4 h-12 border-b border-line shrink-0">
         <IconButton icon="chevron" label="Previous" size="sm" className="-rotate-90" onClick={() => onNav(-1)} />
         <IconButton icon="chevron" label="Next" size="sm" className="rotate-90" onClick={() => onNav(1)} />
@@ -46,7 +46,7 @@ export function RowDrawer({ projectId, rowId, onClose, onNav }: Props) {
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
             <Conversation messages={msgs} editable={editing} onEdit={(i, content) => setMessages(msgs.map((m, k) => (k === i ? { ...m, content } : m)))} />
             {r.metadata.judge && (
-              <section className="rounded-card border border-line bg-bg/40 p-3 flex flex-col gap-2">
+              <section className="rounded-card border border-line bg-surface2 p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between"><span className="label">judge · {r.metadata.models.judge}</span><span className={`font-mono text-[20px] tabular-nums ${r.metadata.judge.score < 3 ? 'text-amber' : 'text-ok'}`}>{r.metadata.judge.score.toFixed(1)}<span className="text-dim text-[11px]"> / 5</span></span></div>
                 <div className="grid grid-cols-4 gap-2">
                   {Object.entries(r.metadata.judge.criteria).map(([k, v]) => (

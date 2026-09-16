@@ -22,11 +22,11 @@ export function Field({ label, hint, children, className }: { label: ReactNode; 
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> { mono?: boolean; invalid?: boolean }
 export function Input({ className, mono = true, invalid, ...rest }: InputProps) {
-  return <input className={clsx('field w-full h-9', !mono && '!font-ui !text-[14px]', invalid && '!border-red/70', className)} {...rest} />
+  return <input className={clsx('field w-full h-9', mono && 'font-mono text-[12.5px]', !mono && 'text-[14px]', invalid && '!border-red/70', className)} {...rest} />
 }
 
 export function Textarea({ className, mono = false, invalid, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { mono?: boolean; invalid?: boolean }) {
-  return <textarea className={clsx('field w-full min-h-[84px] resize-y leading-relaxed', !mono && '!font-ui !text-[14px]', invalid && '!border-red/70', className)} {...rest} />
+  return <textarea className={clsx('field w-full min-h-[84px] resize-y leading-relaxed', mono && 'font-mono text-[12.5px]', !mono && 'text-[14px]', invalid && '!border-red/70', className)} {...rest} />
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
@@ -55,11 +55,11 @@ export function NumberInput({ value, onChange, min, max, step = 1, unit, classNa
 /** Segmented control (e.g. Private / Public). */
 export function Segmented<K extends string>({ options, value, onChange, className }: { options: { key: K; label: string }[]; value: K; onChange: (k: K) => void; className?: string }) {
   return (
-    <div className={clsx('inline-flex rounded-btn border border-line2 bg-bg/60 p-0.5', className)} role="radiogroup">
+    <div className={clsx('inline-flex rounded-btn border border-line2 bg-surface2 p-0.5', className)} role="radiogroup">
       {options.map((o) => (
         <button
           key={o.key} type="button" role="radio" aria-checked={o.key === value} onClick={() => onChange(o.key)}
-          className={clsx('h-7 px-3 rounded-[6px] font-display font-bold uppercase text-[11px] tracking-[.08em] transition-colors focus-ring', o.key === value ? 'bg-green text-bg' : 'text-muted hover:text-text')}
+          className={clsx('h-7 px-3 rounded-[8px] font-ui font-semibold text-[12px] tracking-[-0.01em] transition-colors focus-ring', o.key === value ? 'bg-green text-white' : 'text-muted hover:text-text')}
         >
           {o.label}
         </button>
@@ -77,10 +77,10 @@ export function RadioGroup<K extends string>({ options, value, onChange, classNa
         return (
           <button
             key={o.key} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.key)}
-            className={clsx('flex items-start gap-3 text-left px-3 py-2 rounded-btn border transition-colors focus-ring', on ? 'border-green/50 bg-green/10' : 'border-line hover:border-line2')}
+            className={clsx('flex items-start gap-3 text-left px-3 py-2 rounded-btn border transition-colors focus-ring', on ? 'border-green/40 bg-green/8' : 'border-line hover:border-line2')}
           >
             <span className={clsx('mt-[3px] w-3.5 h-3.5 rounded-full border shrink-0 flex items-center justify-center', on ? 'border-green' : 'border-line2')}>
-              {on && <span className="w-1.5 h-1.5 rounded-full bg-green shadow-glow" />}
+              {on && <span className="w-1.5 h-1.5 rounded-full bg-green" />}
             </span>
             <span className="flex flex-col">
               <span className="text-[14px] font-semibold leading-tight">{o.label}</span>

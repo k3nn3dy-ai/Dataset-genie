@@ -18,11 +18,11 @@ export function ProjectCard({ project, onDelete }: { project: Project; onDelete:
   return (
     <article
       role="link" tabIndex={0} onClick={() => nav(`/p/${project.id}/${next}`)} onKeyDown={(e) => { if (e.key === 'Enter') nav(`/p/${project.id}/${next}`) }}
-      className="panel group relative p-4 flex flex-col gap-3 cursor-pointer transition-all hover:border-green/50 hover:shadow-[0_0_28px_rgba(34,227,90,.10)] focus-ring"
+      className="panel group relative p-4 flex flex-col gap-3 cursor-pointer transition-all hover:border-green/30 hover:shadow-glow focus-ring"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-display font-bold uppercase text-[16px] tracking-[.03em] leading-tight truncate">{project.name}</h3>
+          <h3 className="font-display font-semibold text-[15px] tracking-[-0.015em] leading-tight truncate">{project.name}</h3>
           <div className="font-mono text-[10.5px] text-dim mt-0.5 truncate">{project.slug} · {relTime(project.updated_at)}</div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -39,19 +39,19 @@ export function ProjectCard({ project, onDelete }: { project: Project; onDelete:
         {STAGES.map((st) => {
           const status: string = s?.stages.find((x) => x.stage === st.n)?.status ?? 'todo'
           return (
-            <span key={st.n} title={`${st.title}: ${status}`} className={clsx('h-1.5 flex-1 rounded-full', status === 'done' && 'bg-green shadow-[0_0_6px_rgba(34,227,90,.6)]', status === 'running' && 'bg-ok pulse-dot', status === 'paused' && 'bg-amber shadow-[0_0_6px_rgba(255,160,64,.6)] ring-1 ring-amber/50', status === 'failed' && 'bg-red', status === 'todo' && 'bg-line2')} />
+            <span key={st.n} title={`${st.title}: ${status}`} className={clsx('h-1.5 flex-1 rounded-full', status === 'done' && 'bg-ok', status === 'running' && 'bg-green pulse-dot', status === 'paused' && 'bg-amber', status === 'failed' && 'bg-red', status === 'todo' && 'bg-line')} />
           )
         })}
         <span className="font-mono text-[10px] text-muted ml-1 tabular-nums">{done}/8</span>
       </div>
-      <div className="grid grid-cols-3 gap-2 font-mono text-[11px]">
-        <div><div className="label !text-[9px]">rows</div><div className="text-green text-[15px] tabular-nums">{s ? num(s.rows) : '—'}<span className="text-dim text-[10px]"> / {s ? num(s.target_rows) : '—'}</span></div></div>
-        <div><div className="label !text-[9px]">accepted</div><div className="text-ok text-[15px] tabular-nums">{s ? num(s.accepted) : '—'}</div></div>
-        <div><div className="label !text-[9px]">spend / cap</div><div className="text-[15px] tabular-nums">{usd(project.spend_usd)}<span className="text-dim text-[10px]"> / {usd(project.budget_cap_usd)}</span></div></div>
+      <div className="grid grid-cols-3 gap-2 font-ui text-[12px]">
+        <div><div className="label !text-[10px]">rows</div><div className="text-green text-[15px] tabular-nums whitespace-nowrap">{s ? num(s.rows) : '—'}<span className="text-dim text-[11px]"> / {s ? num(s.target_rows) : '—'}</span></div></div>
+        <div><div className="label !text-[10px]">accepted</div><div className="text-ok text-[15px] tabular-nums">{s ? num(s.accepted) : '—'}</div></div>
+        <div><div className="label !text-[10px]">spend / cap</div><div className="text-[15px] tabular-nums whitespace-nowrap">{usd(project.spend_usd)}<span className="text-dim text-[11px]"> / {usd(project.budget_cap_usd)}</span></div></div>
       </div>
       <div className="flex flex-col gap-1">
-        <div className="h-1 rounded-full bg-bg/70 border border-line overflow-hidden"><div className="h-full bg-green" style={{ width: `${rowsPct}%` }} /></div>
-        <div className="h-1 rounded-full bg-bg/70 border border-line overflow-hidden"><div className={clsx('h-full', tone)} style={{ width: `${spendPct}%` }} /></div>
+        <div className="h-1 rounded-full bg-surface2 overflow-hidden"><div className="h-full bg-green" style={{ width: `${rowsPct}%` }} /></div>
+        <div className="h-1 rounded-full bg-surface2 overflow-hidden"><div className={clsx('h-full', tone)} style={{ width: `${spendPct}%` }} /></div>
       </div>
       <div className="flex items-center justify-between font-mono text-[10px] text-dim">
         <span>next: stage {String(next).padStart(2, '0')} {STAGES[next - 1].title}</span>

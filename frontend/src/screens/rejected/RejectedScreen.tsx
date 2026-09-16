@@ -37,7 +37,7 @@ export function RejectedScreen() {
       <Panel title="Flaw list" actions={<span className="font-mono text-[10px] text-dim">weights {flawTotal}</span>}>
         <div className={draft.strategy === 'corruptor' ? 'flex flex-col gap-3' : 'flex flex-col gap-3 opacity-40 pointer-events-none'}>
           {draft.flaws.map((f, i) => (
-            <div key={i} className="rounded-btn border border-line bg-bg/40 p-2.5 flex flex-col gap-2">
+            <div key={i} className="rounded-btn border border-line bg-surface2 p-2.5 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <Input value={f.name} onChange={(e) => setDraft({ flaws: draft.flaws.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)) })} className="!h-7 flex-1" />
                 <span className="font-mono text-[11px] text-steel tabular-nums w-12 text-right">{flawTotal ? ((f.weight / flawTotal) * 100).toFixed(0) : 0}%</span>
