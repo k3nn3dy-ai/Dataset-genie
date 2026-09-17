@@ -67,3 +67,11 @@ def test_every_stage_has_a_section():
         if not re.search(rf"^## {n}\. {name}\b", text, re.MULTILINE)
     ]
     assert not missing
+
+
+def test_every_project_config_field_is_documented():
+    from genie.schemas import ProjectConfig
+
+    text = read("references/config.md")
+    missing = [name for name in ProjectConfig.model_fields if f"`{name}`" not in text]
+    assert not missing
