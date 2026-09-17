@@ -26,7 +26,8 @@ if (-not (Test-Path '.env')) {
     Write-Host 'Created .env from .env.example. Add your OpenRouter key there, or enter it later in Settings.'
 }
 $envLines = Get-Content '.env'
-$existing = $envLines | Where-Object { $_ -match '^GENIE_MCP_TOKEN=(.+)$' } | Select-Object -First 1
+# Empty GENIE_MCP_TOKEN= still counts as present so we rewrite in place (same as bash).
+$existing = $envLines | Where-Object { $_ -match '^GENIE_MCP_TOKEN=' } | Select-Object -First 1
 $current = $null
 if ($existing) { $current = ($existing -split '=', 2)[1] }
 if (-not $current) {
