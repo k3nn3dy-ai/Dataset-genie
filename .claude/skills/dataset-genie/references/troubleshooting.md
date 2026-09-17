@@ -21,9 +21,13 @@ Every tool error is JSON with a `code`, a `message` and sometimes extra keys. Ma
 `budget_stop` is a **run status**, not an error code. The run reached `stop_at_pct` of the cap and
 stopped cleanly with work still queued.
 
-Raise `budget_cap_usd` with `update_project`, then `resume_run(run_id)`, which requeues the
-pending, errored and skipped items. `resume_run(run_id, force=true)` also requeues items that
-completed partially. Re-running the stage instead would pay again for everything already done.
+Raise `budget_cap_usd` with `update_project`. There's no `estimate_stage` for a resume, so before
+calling `resume_run`, check `get_run(run_id)` for what's left (`pending`, `items_by_status`) and
+what's already been spent (`spend_usd` against `est_usd`) — that's the spend gate's substitute for
+an estimate here (`SKILL.md` § 4). Then `resume_run(run_id)`, which requeues the pending, errored
+and skipped items. `resume_run(run_id, force=true)` also requeues items that completed partially,
+re-billing their earlier calls — do that only if the user asks for it in this turn. Re-running the
+stage instead would pay again for everything already done.
 
 ## Not an error: timed_out
 

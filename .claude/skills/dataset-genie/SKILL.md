@@ -53,8 +53,8 @@ stage that consumes it.
 
 ## 4. The spend gate
 
-Every stage spends real money through OpenRouter. Three tools start a run, not just `run_stage` —
-watch all three:
+Every stage spends real money through OpenRouter. Four tools start a run, not just `run_stage` —
+watch all four:
 
 - **Never start a run without a fresh `estimate_stage` the user has seen in this turn.**
   - `run_stage(project_id, stage, params)` — estimate with `estimate_stage(project_id, stage,
@@ -69,6 +69,12 @@ watch all three:
     `get_stage_data(project_id, stage=6)` shows `embeddings_missing > 0`, the call also starts a
     background stage-6 embeddings run. Check `embeddings_missing` first; if it's positive, estimate
     with `estimate_stage(project_id, 6)` before calling.
+  - `resume_run(run_id, force=false)` — there is no `estimate_stage` for a resume. Instead call
+    `get_run(run_id)` and show the user what's left before resuming: the `pending` count plus the
+    `error`/`skipped` counts in `items_by_status`, and the spend so far — `spend_usd` against the
+    original `est_usd`. `resume_run(run_id, force=true)` additionally requeues `partial` items,
+    whose earlier calls already billed OpenRouter, so those get paid for twice. Gate `force=true`
+    here on the user asking for it in this turn, exactly like the budget override below.
 - An `over_budget` error is resolved by raising the cap or shrinking the stage. Do not pass
   `force: true` to override it unless the user asks for that in this turn.
 
@@ -95,10 +101,19 @@ a whole stage.
 | 5 judge | `only`: `"rows"` or `"pairs"` | Score one side only |
 | 6 filters | `all`, `apply_after` | Re-embed everything; apply rules once embeddings land |
 
-`force` is also accepted by any stage to override an `over_budget` refusal — gated on the user
-asking, per the spend gate above. This is the same key as the stage-2 content `force`: a request
-to force-regenerate prompts does not by itself authorize a budget override. If `estimate_stage`
-comes back over-cap, confirm that with the user separately before passing `force`.
+`force` means three different things depending on where you pass it, and none of them imply the
+others:
+
+- **Content `force`** — the stage-2 `params.force` (also passed to `estimate_stage` for a
+  `resample_prompts` estimate, per the spend gate above): regenerate prompts that already exist,
+  ignoring what's there.
+- **Budget-override `force`** — accepted by `run_stage` to push past an `over_budget` refusal.
+  Gated on the user asking, per the spend gate above. A request to force-regenerate prompts does
+  not by itself authorize this. If `estimate_stage` comes back over-cap, confirm that with the
+  user separately before passing `force`.
+- **Resume `force`** — `resume_run(run_id, force=true)` additionally requeues `partial` items,
+  whose earlier calls already billed OpenRouter, so those are paid for twice. Gate this on the
+  user asking for it in that turn too.
 
 Stages 7 (review) and 8 (export) have no runs. `run_stage` rejects them with `bad_stage` and names
 the right tool in `hint`: `review_rows` and `export_dataset`.
