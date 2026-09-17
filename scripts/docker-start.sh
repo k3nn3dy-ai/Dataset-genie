@@ -19,6 +19,19 @@ if [ ! -f .env ]; then
   cp .env.example .env
   echo "Created .env from .env.example. Add your OpenRouter key there, or enter it later in Settings."
 fi
+# Fill GENIE_MCP_TOKEN when missing or empty (print once).
+if ! grep -qE '^GENIE_MCP_TOKEN=.+' .env; then
+  tok="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))' 2>/dev/null || openssl rand -hex 32)"
+  if grep -qE '^GENIE_MCP_TOKEN=' .env; then
+    tmp="$(mktemp)"
+    awk -v tok="$tok" 'BEGIN{done=0} /^GENIE_MCP_TOKEN=/{print "GENIE_MCP_TOKEN=" tok; done=1; next} {print} END{if(!done) print "GENIE_MCP_TOKEN=" tok}' .env > "$tmp"
+    mv "$tmp" .env
+  else
+    printf '\nGENIE_MCP_TOKEN=%s\n' "$tok" >> .env
+  fi
+  echo "MCP token (save for your MCP client): $tok"
+  echo "Saved to .env. UI is still unauthenticated."
+fi
 # read GENIE_PORT from .env unless already set in the shell
 PORT="${GENIE_PORT:-$(grep -E '^GENIE_PORT=' .env 2>/dev/null | cut -d= -f2)}"
 PORT="${PORT:-8765}"

@@ -21,3 +21,11 @@ def test_spa_blocks_path_traversal(genie_home, tmp_path, monkeypatch):
             assert "TOP-SECRET" not in r.text, path
         assert c.get("/assets/app.js").text == "console.log(1)"
         assert "Dataset Genie" in c.get("/p/abc/3").text  # SPA fallback
+        mcp = c.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+            follow_redirects=False,
+        )
+        assert mcp.status_code == 503
+        assert "Dataset Genie" not in (mcp.text or "") or mcp.status_code in (401, 503, 200, 406)
+        assert "<title>Dataset Genie</title>" not in (mcp.text or "")

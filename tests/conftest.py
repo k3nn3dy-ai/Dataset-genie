@@ -8,6 +8,9 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def genie_home(tmp_path, monkeypatch):
     monkeypatch.setenv("GENIE_HOME", str(tmp_path))
+    # A host shell that already exported GENIE_MCP_TOKEN (e.g. from a previous `make start`)
+    # must not leak into isolated tests: they expect MCP disabled-without-token to mean 503.
+    monkeypatch.delenv("GENIE_MCP_TOKEN", raising=False)
     from genie import config, db
 
     config.reset_settings_cache()

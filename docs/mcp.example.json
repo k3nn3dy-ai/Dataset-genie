@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "dataset-genie": {
+      "url": "http://localhost:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <GENIE_MCP_TOKEN>"
+      }
+    }
+  }
+}

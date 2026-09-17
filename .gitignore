@@ -17,3 +17,6 @@ docs/screenshots/*.tmp.png
 
 # Superdesign temp HTML for canvas uploads
 .superdesign/tmp/
+
+# local git worktrees
+.worktrees/

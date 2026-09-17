@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     app_referer: str = "http://localhost:8765"
     app_title: str = "Dataset Genie"
     catalogue_ttl_hours: int = 24
+    mcp_token: str = ""
 
     @property
     def db_path(self) -> Path:
