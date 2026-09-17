@@ -85,3 +85,15 @@ def test_every_bulk_review_action_is_documented():
     text = read("references/quality.md")
     missing = [a for a in typing.get_args(BulkAction) if f"`{a}`" not in text]
     assert not missing
+
+
+def test_every_error_code_is_documented():
+    mcp_source = REPO / "backend" / "genie" / "mcp"
+    codes: set[str] = set()
+    for path in mcp_source.rglob("*.py"):
+        codes |= set(re.findall(r'fail\(\s*"([a-z_]+)"', path.read_text(encoding="utf-8")))
+    assert codes, "found no fail() calls — the regex or the layout changed"
+
+    text = read("references/troubleshooting.md")
+    missing = sorted(code for code in codes if f"`{code}`" not in text)
+    assert not missing
