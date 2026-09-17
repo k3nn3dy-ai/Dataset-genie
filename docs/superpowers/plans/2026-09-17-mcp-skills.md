@@ -10,6 +10,17 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-17-mcp-skills-design.md`
 
+> **This plan is a historical artifact, not a build recipe.** The skill under
+> `.claude/skills/dataset-genie/` is the authority. Execution found eight factual errors in the
+> prose this plan specifies — a false `data_types` gate on stage 4, an unreachable
+> `nothing_to_do` for stage 1 that masked a destructive re-run, a row-count formula wrong at
+> `depth<=2` and understated by `negative_branches`, the same `data_types` claim repeated in the
+> config reference, an omitted `ResponsesConfig` field, and a spend gate that guarded only
+> `run_stage` while `resample_prompts`, `run_filters` and `resume_run` also spend. Some were
+> corrected here as they were found; the later ones were not. Regenerating the skill from this
+> document would reintroduce the ones that were not. Read it for the reasoning; read the shipped
+> files for the facts.
+
 ## Global Constraints
 
 - Skill directory: `.claude/skills/dataset-genie/`. Skill `name` in frontmatter is `dataset-genie` and must equal the directory name.
