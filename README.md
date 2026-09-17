@@ -86,6 +86,18 @@ Cursor example (`docs/mcp.example.json`):
 }
 ````
 
+[Claude Code](https://code.claude.com/docs/en/mcp) (app must already be running):
+
+```bash
+claude mcp add --transport http dataset-genie http://localhost:8765/mcp \
+  --header "Authorization: Bearer <GENIE_MCP_TOKEN>"
+```
+
+That registers the server for this project (`local` scope). Use `--scope user` to add it
+for every project. Check with `claude mcp list`, or `/mcp` inside a Claude Code session.
+If you write JSON yourself, Claude Code requires `"type": "http"` (or `"streamable-http"`);
+an entry with only `url` is treated as stdio and skipped.
+
 Native: `export GENIE_MCP_TOKEN=...` before `make start`. If the token is empty, `/mcp`
 returns 503 and the rest of the app still works. Do not expose the port on a network.
 
