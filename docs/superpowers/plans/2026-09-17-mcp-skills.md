@@ -16,6 +16,7 @@
 - Test file: `tests/test_skill_docs.py`. It must not require network access.
 - The repo venv is `.venv` (symlink to `~/.venvs/dataset-genie`). Run tests as `.venv/bin/python -m pytest`.
 - Ruff `line-length = 100` applies to the test file.
+- Enumerate MCP tools through the public `await mcp.list_tools()`, never `mcp._tool_manager`. `asyncio_mode = "auto"` is set, so an `async def test_` needs no decorator.
 - There are exactly 25 registered MCP tools and 11 distinct `fail()` error codes as of this plan. Do not hardcode either list in the skill's tests — derive both from source.
 - Judge scores are visible and never gating: any skill text about `gate_on_score` must say it stays `false` unless the user asks.
 - Every commit message ends with:
@@ -48,7 +49,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `SKILL_DIR: Path`, `read(name: str) -> str`, `registered_tool_names() -> set[str]`, `documented_tool_names() -> set[str]` in `tests/test_skill_docs.py`. Later tasks add tests to this same file and reuse `read`.
+- Produces: `REPO: Path`, `SKILL_DIR: Path`, `read(name: str) -> str`, `async registered_tool_names() -> set[str]`, `documented_tool_names() -> set[str]` in `tests/test_skill_docs.py`. Later tasks add tests to this same file and reuse `read`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -71,13 +72,13 @@ def read(name: str) -> str:
     return (SKILL_DIR / name).read_text(encoding="utf-8")
 
 
-def registered_tool_names() -> set[str]:
+async def registered_tool_names() -> set[str]:
     from genie.mcp.server import mcp
     from genie.mcp.tools import export, inspect, projects, review, runs, setup
 
     for module in (export, inspect, projects, review, runs, setup):
         module.register()
-    return {tool.name for tool in mcp._tool_manager.list_tools()}
+    return {tool.name for tool in await mcp.list_tools()}
 
 
 def documented_tool_names() -> set[str]:
@@ -94,9 +95,9 @@ def test_frontmatter_names_the_skill():
     assert 0 < len(meta["description"]) <= 1024
 
 
-def test_documented_tools_match_the_registry():
+async def test_documented_tools_match_the_registry():
     documented = documented_tool_names()
-    registered = registered_tool_names()
+    registered = await registered_tool_names()
     assert documented == registered, {
         "in skill but not registered": sorted(documented - registered),
         "registered but undocumented": sorted(registered - documented),
