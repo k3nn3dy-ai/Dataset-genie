@@ -83,7 +83,9 @@ a whole stage.
 | 6 filters | `all`, `apply_after` | Re-embed everything; apply rules once embeddings land |
 
 `force` is also accepted by any stage to override an `over_budget` refusal — gated on the user
-asking, per the spend gate above.
+asking, per the spend gate above. This is the same key as the stage-2 content `force`: a request
+to force-regenerate prompts does not by itself authorize a budget override. If `estimate_stage`
+comes back over-cap, confirm that with the user separately before passing `force`.
 
 Stages 7 (review) and 8 (export) have no runs. `run_stage` rejects them with `bad_stage` and names
 the right tool in `hint`: `review_rows` and `export_dataset`.
