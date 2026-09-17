@@ -7,7 +7,7 @@
 
 The MCP server exposes 25 tools, and their schemas describe each call in isolation. They do not
 describe the pipeline those calls belong to. An agent reading the schemas alone cannot know that
-stage 4 has nothing to do unless `data_types` includes `dpo`, that `params` accepts `leaf_id` on
+stage 4 builds pairs even in an SFT-only project, that `params` accepts `leaf_id` on
 stage 2 and `only` on stage 5, that `wait_for_run` returns `timed_out: true` rather than failing,
 or that a `budget_stop` is a successful partial run that resumes rather than a failure that
 re-runs. Nor can it know the project's own convention that judge scores are visible and never
@@ -108,7 +108,9 @@ Stages 7 and 8 have no runs. `run_stage` rejects them with a `bad_stage` error n
 One entry per stage: what it consumes, what it writes, its params, and what `nothing_to_do` means
 there specifically. Sequencing rules that live here:
 
-- Stage 4 (preferences) has work only when `data_types` includes `dpo`.
+- Stage 4 (preferences) is NOT gated on `data_types`: it pairs any row whose status is `draft`,
+  `accepted` or `edited` and whose kind is not `tools`, so it spends money in an SFT-only project
+  unless the agent skips it deliberately.
 - Stage 5 (judge) scores both rows and pairs; `only` splits them.
 - Stage 6 (filters) is the irregular one. `run_filters` applies the rules synchronously, but when
   `near_dup` is enabled and `embeddings_missing > 0` it also starts a background stage-6 run and

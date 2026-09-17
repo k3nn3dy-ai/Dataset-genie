@@ -386,8 +386,15 @@ redo a subset.
 
 Consumes rows. Produces chosen/rejected pairs for DPO/ORPO.
 
-**Only has work when the project's `data_types` includes `dpo`.** If it does not, this stage is
-correctly skipped — that is not an error.
+Eligibility is not gated on `data_types`. A row is eligible when its status is `draft`,
+`accepted` or `edited`, its kind is not `tools`, and it has no pair yet. `data_types` only sets a
+row's kind — `tools`, `grpo`, else `sft`; `dpo` is never a kind — and selects export formats.
+
+**So this stage will build pairs, and spend money, even in an SFT-only project.** If the user did
+not ask for preference data, skip stage 4 deliberately rather than assuming the pipeline skips it
+for them.
+
+`nothing_to_do`: no eligible rows — every row is already paired, or stage 3 has not run yet.
 
 Strategies: `corruptor` (rewrite the good answer with an injected flaw), `weaker` (a smaller
 model answers), `hightemp` (the same model at high temperature).
