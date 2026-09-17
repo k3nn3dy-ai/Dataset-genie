@@ -154,6 +154,8 @@ user asks for it.
 
 The typed error codes, each with its recovery move.
 
+All eleven codes raised by `fail()` under `backend/genie/mcp/`, each with its recovery move:
+
 | Code | Recovery |
 |---|---|
 | `missing_secret` | `set_secret`. Stop and ask the user for the value; never invent one |
@@ -162,8 +164,11 @@ The typed error codes, each with its recovery move.
 | `nothing_to_do` | The stage is already satisfied. Re-read `next_stage` |
 | `bad_stage` | Stage 7/8 have no run; use the tool named in `hint` |
 | `export_invalid` | Read `issues`; they are per-row and name the failing rows |
+| `invalid_messages` | A single-row edit produced a malformed `messages` list. Read `errors` |
 | `secret_leak` | A token-like string reached the brief or config. Scrub it |
+| `run_failed` | On a push failure the bundle exists at `path`; only the push failed |
 | `not_found` | Stale project or run id. Re-list |
+| `bad_request` | Everything else, including unmapped errors. Read the message |
 
 Run status `budget_stop` is not in this table because it is not an error: it is a successful
 partial run. Raise the cap, then `resume_run`, which requeues pending, error and skipped items
