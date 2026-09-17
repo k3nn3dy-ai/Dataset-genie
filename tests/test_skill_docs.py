@@ -55,3 +55,15 @@ def test_params_table_covers_every_runnable_stage():
     assert match, "SKILL.md must contain an '## MCP params' section"
     documented = {int(n) for n in re.findall(r"^\| (\d) ", match.group(1), re.MULTILINE)}
     assert documented == set(RUNNABLE)
+
+
+def test_every_stage_has_a_section():
+    from genie.schemas import STAGE_NAMES
+
+    text = read("references/stages.md")
+    missing = [
+        f"{n}. {name}"
+        for n, name in STAGE_NAMES.items()
+        if not re.search(rf"^## {n}\. {name}\b", text, re.MULTILINE)
+    ]
+    assert not missing
