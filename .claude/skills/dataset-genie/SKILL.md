@@ -7,6 +7,94 @@ description: Generate a fine-tuning dataset with Dataset Genie over MCP. Use whe
 
 Drive the eight-stage dataset pipeline over MCP.
 
+The tool schemas describe each call in isolation. This skill covers the order they go in, what
+they cost, and how to read what comes back. Load a `references/` file only when you reach the job
+it covers.
+
+## 1. Preflight
+
+Call `health`, then `secrets_status`. The only secret names are `openrouter` and `huggingface`.
+`openrouter` must read `set` before any stage that calls a model.
+
+A 503 from the MCP endpoint means `GENIE_MCP_TOKEN` is empty in the server's environment. That is
+a user action — tell them, do not retry.
+
+## 2. Pick up the project
+
+New work: `list_presets`, then `create_project(preset, name, domain_brief)`. The four presets are
+`quick-sft`, `dpo-corruptor`, `tool-calling-200` and `reasoning-traces`.
+
+Existing work: `list_projects`, then `get_project`.
+
+**Read `next_stage` from `get_project` rather than inferring position from row counts.** Resuming
+a half-finished project is the common case and the server already computes the answer.
+
+## 3. Run a stage
+
+For each stage, in order:
+
+1. `estimate_stage(project_id, stage, params)` — returns the projected cost and `items`, the
+   number of units of work.
+2. Present the cost and item count to the user.
+3. **Wait for approval.**
+4. `run_stage(project_id, stage, params)` — returns a `run_id`.
+5. `wait_for_run(run_id, timeout_s)`.
+
+`wait_for_run` clamps `timeout_s` to 120 seconds and returns `timed_out: true` instead of raising.
+A timeout means the run is still going — call it again. It is not a failure.
+
+Terminal statuses: `done`, `failed`, `cancelled`, `budget_stop`. A `budget_stop` is a **successful
+partial run**, not an error: the cap was reached and the remaining work is still queued. Raise
+`budget_cap_usd` with `update_project`, then `resume_run` — do not re-run the stage, which would
+pay for the completed items twice.
+
+Between stages, `get_stage_data` is free. Use it to sanity-check output before paying for the
+stage that consumes it.
+
+## 4. The spend gate
+
+Every stage spends real money through OpenRouter. Two rules:
+
+- **Never call `run_stage` without a fresh `estimate_stage` the user has seen in this turn.**
+- An `over_budget` error is resolved by raising the cap or shrinking the stage. Do not pass
+  `force: true` to override it unless the user asks for that in this turn.
+
+## 5. Export
+
+Inspect stage 7 first (`get_stage_data(project_id, stage=7)`) to confirm what is exportable, then
+`export_dataset`.
+
+`push` publishes to Hugging Face and is irreversible. Supply it only when the user asks for a push
+in this turn — never because a config carries a `repo_id`.
+
+## MCP params
+
+`params` is typed `dict[str, Any]`, so the tool schema says nothing about it. These are the keys
+each runnable stage accepts. They are what make targeted re-runs possible instead of regenerating
+a whole stage.
+
+| Stage | Params | Effect |
+|---|---|---|
+| 1 taxonomy | config-shaped: `topics`, `subtopics_per_topic`, `leaves_per_topic`, `rows_per_leaf`, `task_types`, … | Overrides `TaxonomyConfig` for this run |
+| 2 prompts | `leaf_id`, `force` | Restrict to one leaf; `force` regenerates prompts that already exist |
+| 3 responses | `prompt_ids`, `regenerate` | Target specific prompts; `regenerate` overwrites existing responses |
+| 4 preferences | `row_ids` | Build pairs for those rows only |
+| 5 judge | `only`: `"rows"` or `"pairs"` | Score one side only |
+| 6 filters | `all`, `apply_after` | Re-embed everything; apply rules once embeddings land |
+
+`force` is also accepted by any stage to override an `over_budget` refusal — gated on the user
+asking, per the spend gate above.
+
+Stages 7 (review) and 8 (export) have no runs. `run_stage` rejects them with `bad_stage` and names
+the right tool in `hint`: `review_rows` and `export_dataset`.
+
+## References
+
+- `references/stages.md` — what each stage consumes and produces
+- `references/config.md` — the `ProjectConfig` tree and how to patch it
+- `references/quality.md` — judge scores, filters and the review triage loop
+- `references/troubleshooting.md` — every error code and its recovery move
+
 ## Tools
 
 - `health`

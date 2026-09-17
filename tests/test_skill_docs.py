@@ -44,3 +44,14 @@ async def test_documented_tools_match_the_registry():
         "in skill but not registered": sorted(documented - registered),
         "registered but undocumented": sorted(registered - documented),
     }
+
+
+def test_params_table_covers_every_runnable_stage():
+    from genie.mcp.stages import RUNNABLE
+
+    match = re.search(
+        r"^## MCP params$\n(.*?)(?=^## |\Z)", read("SKILL.md"), re.DOTALL | re.MULTILINE
+    )
+    assert match, "SKILL.md must contain an '## MCP params' section"
+    documented = {int(n) for n in re.findall(r"^\| (\d) ", match.group(1), re.MULTILINE)}
+    assert documented == set(RUNNABLE)
