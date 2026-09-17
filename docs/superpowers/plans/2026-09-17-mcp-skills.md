@@ -509,7 +509,7 @@ object:
 
 | Field | Default | Notes |
 |---|---|---|
-| `data_types` | `["sft"]` | `sft`, `dpo`, `tools`, `grpo`. Gates whether stage 4 has work |
+| `data_types` | `["sft"]` | `sft`, `dpo`, `tools`, `grpo`. Sets each row's kind (`tools`, `grpo`, else `sft`) and which export formats apply. It does **not** gate stage 4 — see `stages.md` |
 | `budget_cap_usd` | `15.0` | Server-side cap, enforced on every call |
 | `stop_at_pct` | `90` | Auto-stop at this percentage of the cap → run status `budget_stop` |
 | `concurrency` | `8` | Parallel model calls |
@@ -532,8 +532,8 @@ available slugs.
   `noise_level` (0.15), `adversarial_pct` (5.0), `near_dup_threshold`, `embedding_model`.
 - **`responses`** — `ensemble` (list of slots), `selection` (`round-robin` | `weighted`),
   `temperature`, `max_tokens`, `system_prompt`, `system_prompt_policy` (`always` | `never` |
-  `random`), `multi_turn`, `simulated_user_model`, `turns_min`/`turns_max`, `user_mood`,
-  `reasoning_tags`.
+  `random`), `system_prompt_random_pct` (50.0), `multi_turn`, `simulated_user_model`,
+  `turns_min`/`turns_max`, `user_mood`, `reasoning_tags`.
 - **`preferences`** — `strategy` (`corruptor` | `weaker` | `hightemp`), `weaker_model`,
   `hightemp_temperature`, `flaws` (weighted name/instruction list).
 - **`judge`** — `model` (temperature 0.0), `rubric` (weighted criteria; defaults are Correctness
