@@ -75,3 +75,13 @@ def test_every_project_config_field_is_documented():
     text = read("references/config.md")
     missing = [name for name in ProjectConfig.model_fields if f"`{name}`" not in text]
     assert not missing
+
+
+def test_every_bulk_review_action_is_documented():
+    import typing
+
+    from genie.mcp.tools.review import BulkAction
+
+    text = read("references/quality.md")
+    missing = [a for a in typing.get_args(BulkAction) if f"`{a}`" not in text]
+    assert not missing
