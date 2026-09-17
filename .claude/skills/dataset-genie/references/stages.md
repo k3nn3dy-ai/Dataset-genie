@@ -6,11 +6,21 @@ Params for each stage are tabulated in `SKILL.md` under "MCP params".
 ## 1. taxonomy
 
 Consumes the project's `domain_brief`. Produces a topic → subtopic → leaf tree, with a planned row
-count per leaf. Shape comes from `TaxonomyConfig`: `topics × subtopics_per_topic × leaves_per_topic
-× rows_per_leaf` is the target row count.
+count per leaf.
 
-`nothing_to_do`: a tree already exists. To reshape it, edit with `update_taxonomy` or re-run with
-different params.
+Shape comes from `TaxonomyConfig`. At the default `depth=3` (topic → subtopic → leaf) the nominal
+target is `topics × subtopics_per_topic × leaves_per_topic × rows_per_leaf`. At `depth=2` (topic →
+leaf) the subtopic level is skipped entirely and `subtopics_per_topic` is ignored, making it
+`topics × leaves_per_topic × rows_per_leaf`. `negative_branches` (on by default) adds one further
+topic beyond `topics`, with its own leaves, so the real count runs above the nominal figure either
+way. Treat the formula as a sanity check and `estimate_stage` as the authority.
+
+**This stage never reports `nothing_to_do`** — its plan always contains exactly one work item, so
+there is no short-circuit when a tree already exists. Re-running it regenerates the tree from
+scratch and replaces the old one: every existing node is deleted, every attached prompt cascades
+away with it, and rows generated at stage 3 survive orphaned, with a dangling `leaf_id` and a null
+`prompt_id`. To reshape a tree without losing that work, edit it with `update_taxonomy` instead of
+re-running the stage.
 
 ## 2. prompts
 
