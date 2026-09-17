@@ -9,7 +9,7 @@ Every tool error is JSON with a `code`, a `message` and sometimes extra keys. Ma
 | `run_conflict` | A run is already active for this project. Carries `run_id` and `stage` | Do not start another. `get_run` or `wait_for_run` on the one that is live, or `cancel_run` if the user wants it stopped |
 | `nothing_to_do` | The stage has no work left. Carries `estimate` | Not a failure. Re-read `next_stage` from `get_project`. To redo work deliberately, use the stage's `force` / `regenerate` param |
 | `bad_stage` | Unknown stage, or stage 7/8 passed to `run_stage`. Carries `valid` or `hint` | Use the tool named in `hint`: `review_rows` for review, `export_dataset` for export |
-| `export_invalid` | Export validation failed. Carries `total` and a per-row `issues` list | Read `issues` — they name the offending rows. Fix with `review_rows`, or drop them, then re-export |
+| `export_invalid` | Export validation failed. Carries `total` and a per-row `issues` list capped at the first 10 — `total` is the real count | Read `issues` — they name the offending rows. Fix with `review_rows`, or drop them, then re-export. If `total` exceeds 10, the export may still fail after fixing those; re-read the new `issues` list |
 | `invalid_messages` | A single-row `review_rows` edit produced a malformed `messages` list. Carries `errors` | Fix the message shape (role/content, tool-call pairing) and retry |
 | `secret_leak` | A token-like string reached an artefact | A key is sitting in the `domain_brief` or config. Find it, scrub it with `update_project`, re-export |
 | `run_failed` | A run or push failed. On a push failure the message carries the local bundle `path` | The bundle exists on disk; the push is what failed. Check the HF token and repo namespace, then retry the push |

@@ -87,12 +87,34 @@ def test_every_bulk_review_action_is_documented():
     assert not missing
 
 
-def test_every_error_code_is_documented():
+FAIL_SITE = re.compile(r"(?<!def )(?<![\w.])fail\(")
+FAIL_LITERAL = re.compile(r'(?<!def )(?<![\w.])fail\(\s*"([^"]*)"')
+
+
+def source_error_codes() -> set[str]:
+    """Every code raised by `fail()` under backend/genie/mcp/.
+
+    Call sites are matched to literal codes by position, per file, so a code passed as a
+    variable or an f-string fails here loudly instead of vanishing from the check below.
+    """
     mcp_source = REPO / "backend" / "genie" / "mcp"
     codes: set[str] = set()
     for path in mcp_source.rglob("*.py"):
-        codes |= set(re.findall(r'fail\(\s*"([a-z_]+)"', path.read_text(encoding="utf-8")))
+        text = path.read_text(encoding="utf-8")
+        sites = {m.start() for m in FAIL_SITE.finditer(text)}
+        literals = {m.start(): m.group(1) for m in FAIL_LITERAL.finditer(text)}
+        assert sites == set(literals), (
+            f"{path}: fail() call site with no literal code at {sorted(sites - set(literals))}"
+        )
+        codes |= set(literals.values())
+    return codes
+
+
+def test_every_error_code_is_documented():
+    codes = source_error_codes()
     assert codes, "found no fail() calls — the regex or the layout changed"
+    malformed = sorted(code for code in codes if not re.fullmatch(r"[a-z_]+", code))
+    assert not malformed, f"error code outside [a-z_]+; widen this check and the docs: {malformed}"
 
     text = read("references/troubleshooting.md")
     missing = sorted(code for code in codes if f"`{code}`" not in text)
