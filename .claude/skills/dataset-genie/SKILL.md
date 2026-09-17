@@ -29,6 +29,10 @@ Existing work: `list_projects`, then `get_project`.
 **Read `next_stage` from `get_project` rather than inferring position from row counts.** Resuming
 a half-finished project is the common case and the server already computes the answer.
 
+`delete_project` destroys the project outright — every taxonomy node, prompt, row, pair, run and
+export attached to it, unconfirmed. Never call it unless the user has asked for that specific
+project to be deleted.
+
 ## 3. Run a stage
 
 For each stage, in order:
@@ -46,7 +50,8 @@ A timeout means the run is still going — call it again. It is not a failure.
 Terminal statuses: `done`, `failed`, `cancelled`, `budget_stop`. A `budget_stop` is a **successful
 partial run**, not an error: the cap was reached and the remaining work is still queued. Raise
 `budget_cap_usd` with `update_project`, then `resume_run` — do not re-run the stage, which would
-pay for the completed items twice.
+pay for the completed items twice. Before that `resume_run`, check `get_run` and gate `force` per
+the spend gate below (§ 4).
 
 Between stages, `get_stage_data` is free. Use it to sanity-check output before paying for the
 stage that consumes it.
@@ -68,13 +73,18 @@ watch all four:
   - `run_filters(project_id, config)` — applying rules is free, but if `near_dup` is on and
     `get_stage_data(project_id, stage=6)` shows `embeddings_missing > 0`, the call also starts a
     background stage-6 embeddings run. Check `embeddings_missing` first; if it's positive, estimate
-    with `estimate_stage(project_id, 6)` before calling.
+    with `estimate_stage(project_id, 6)` before calling. That check reads the **stored** config —
+    if you are turning `near_dup` on in the `config` you are about to pass, the stored
+    `embeddings_missing` was computed against `near_dup: false` and comes back `0` no matter how
+    much work is actually queued. Estimate stage 6 anyway in that case.
   - `resume_run(run_id, force=false)` — there is no `estimate_stage` for a resume. Instead call
-    `get_run(run_id)` and show the user what's left before resuming: the `pending` count plus the
-    `error`/`skipped` counts in `items_by_status`, and the spend so far — `spend_usd` against the
-    original `est_usd`. `resume_run(run_id, force=true)` additionally requeues `partial` items,
-    whose earlier calls already billed OpenRouter, so those get paid for twice. Gate `force=true`
-    here on the user asking for it in this turn, exactly like the budget override below.
+    `get_run(run_id)` and show the user what's left before resuming: the `pending` count, the
+    `partial` count, and the `error`/`skipped` counts in `items_by_status`, and the spend so far —
+    `spend_usd` against the original `est_usd`. `resume_run(run_id, force=true)` additionally
+    requeues those `partial` items, whose earlier calls already billed OpenRouter, so those get
+    paid for twice — that's exactly the count the user needs to see before approving `force=true`.
+    Gate `force=true` here on the user asking for it in this turn, exactly like the budget override
+    below.
 - An `over_budget` error is resolved by raising the cap or shrinking the stage. Do not pass
   `force: true` to override it unless the user asks for that in this turn.
 
@@ -94,15 +104,24 @@ a whole stage.
 
 | Stage | Params | Effect |
 |---|---|---|
-| 1 taxonomy | config-shaped: `topics`, `subtopics_per_topic`, `leaves_per_topic`, `rows_per_leaf`, `task_types`, … | Overrides `TaxonomyConfig` for this run |
+| 1 taxonomy | config-shaped: `topics`, `subtopics_per_topic`, `leaves_per_topic`, `rows_per_leaf`, `task_types`, … | Persists into `TaxonomyConfig` — not just this run |
 | 2 prompts | `leaf_id`, `force` | Restrict to one leaf; `force` regenerates prompts that already exist |
 | 3 responses | `prompt_ids`, `regenerate` | Target specific prompts; `regenerate` overwrites existing responses |
 | 4 preferences | `row_ids` | Build pairs for those rows only |
 | 5 judge | `only`: `"rows"` or `"pairs"` | Score one side only |
 | 6 filters | `all`, `apply_after` | Re-embed everything; apply rules once embeddings land |
 
-`force` means three different things depending on where you pass it, and none of them imply the
-others:
+Config-shaped params for **every** stage — not just stage 1 — persist the same way: `run_stage`
+writes them back into `project.config` before it executes, so a one-off `params={"rows_per_leaf":
+20}` reshapes every later estimate and run for that stage, not just this one. Use
+`update_project` when you want to change config deliberately, and expect anything config-shaped
+you pass here to stick.
+
+The first two spellings of `force` are **one flag wearing two hats, not two flags**:
+content-force and budget-override-force are the same key in the same `params` dict, so passing
+`force` to regenerate stage-2 prompts also disables the over-cap check on that same call — they
+cannot be split apart on a single `run_stage` call. Resume-force is unrelated: a separate keyword
+argument on a different tool (`resume_run`), not this key at all.
 
 - **Content `force`** — the stage-2 `params.force` (also passed to `estimate_stage` for a
   `resample_prompts` estimate, per the spend gate above): regenerate prompts that already exist,
@@ -113,7 +132,7 @@ others:
   user separately before passing `force`.
 - **Resume `force`** — `resume_run(run_id, force=true)` additionally requeues `partial` items,
   whose earlier calls already billed OpenRouter, so those are paid for twice. Gate this on the
-  user asking for it in that turn too.
+  user asking for it in this turn too.
 
 Stages 7 (review) and 8 (export) have no runs. `run_stage` rejects them with `bad_stage` and names
 the right tool in `hint`: `review_rows` and `export_dataset`.

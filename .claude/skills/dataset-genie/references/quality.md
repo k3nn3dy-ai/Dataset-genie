@@ -55,7 +55,10 @@ will actually reach the bundle.
 Two modes, and it is one tool for both:
 
 - **Bulk:** `ids` plus `action`, one of `accept`, `flag`, `unflag`, `delete`, `restore`.
-  `action` is required whenever `ids` is set.
+  `action` is required whenever `ids` is set. **`delete` is a permanent hard delete** — it removes
+  the row and its pair for good, unlike filtering (which only changes status, so
+  `restore_filtered` puts rows back) and unlike `flag`/`unflag`/`restore` here. Prefer filtering
+  or flagging unless the user has specifically asked for deletion.
 - **Single row:** `row_id` plus any of `messages`, `status`, `flags_add`, `flags_remove`.
   Invalid `messages` come back as `invalid_messages` with a per-message `errors` list.
 

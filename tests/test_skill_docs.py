@@ -70,10 +70,20 @@ def test_every_stage_has_a_section():
 
 
 def test_every_project_config_field_is_documented():
+    from pydantic import BaseModel
+
     from genie.schemas import ProjectConfig
 
     text = read("references/config.md")
     missing = [name for name in ProjectConfig.model_fields if f"`{name}`" not in text]
+    for parent, field in ProjectConfig.model_fields.items():
+        annotation = field.annotation
+        if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+            missing += [
+                f"{parent}.{child}"
+                for child in annotation.model_fields
+                if f"`{child}`" not in text
+            ]
     assert not missing
 
 

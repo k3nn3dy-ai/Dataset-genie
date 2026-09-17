@@ -59,3 +59,10 @@ one export without persisting them.
 `update_taxonomy(project_id, tree)` is a **full replace**, not a patch. Read the current tree with
 `get_stage_data(project_id, stage=1)`, mutate it, and write the whole thing back. Passing a
 partial tree deletes everything absent from it.
+
+**Keep each node's `id`.** A node in the tree you write back is matched to its existing row, and
+keeps its attached prompts, only if it still carries that row's `id`. Any node without a matching
+id is created fresh, and every existing node whose id is missing from what you send is deleted
+along with its prompts — the same cascade as re-running stage 1. This is what makes
+`update_taxonomy` safe to use as the non-destructive alternative (see `stages.md`): round-tripping
+the tree you fetched, ids intact, not reconstructing it from scratch.
