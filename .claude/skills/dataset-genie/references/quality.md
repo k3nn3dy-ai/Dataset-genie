@@ -43,11 +43,11 @@ will actually reach the bundle.
 
 | Symptom | Move |
 |---|---|
-| Low scores concentrated in one leaf | `resample_prompts(project_id, leaf_id)` — deletes that leaf's unused prompts and re-runs stage 2 for it only |
+| Low scores concentrated in one leaf | `resample_prompts(project_id, leaf_id)` — deletes that leaf's unused prompts and re-runs stage 2 for it only. Starts a run: estimate first with `force: true` per the spend gate (`SKILL.md` § 4) |
 | Low scores everywhere | The teacher or the system prompt is wrong. Change `responses` config, then re-run stage 3 with `regenerate: true` |
 | A handful of bad rows | `review_rows(project_id, row_id=..., messages=[...])` to edit in place |
 | Rows filtered you disagree with | `restore_filtered(project_id, ids)` |
-| A whole rule over-filtering | Adjust the rule in `run_filters(project_id, config={...})` and re-apply |
+| A whole rule over-filtering | Adjust the rule in `run_filters(project_id, config={...})` and re-apply. Can start a background stage-6 run if `embeddings_missing > 0` — check that and estimate first per the spend gate (`SKILL.md` § 4) |
 | Coverage gaps | Edit the tree with `update_taxonomy` (full replace — see `config.md`), then re-run stages 2 and 3 |
 
 ## review_rows

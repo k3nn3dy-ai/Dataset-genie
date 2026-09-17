@@ -53,9 +53,22 @@ stage that consumes it.
 
 ## 4. The spend gate
 
-Every stage spends real money through OpenRouter. Two rules:
+Every stage spends real money through OpenRouter. Three tools start a run, not just `run_stage` —
+watch all three:
 
-- **Never call `run_stage` without a fresh `estimate_stage` the user has seen in this turn.**
+- **Never start a run without a fresh `estimate_stage` the user has seen in this turn.**
+  - `run_stage(project_id, stage, params)` — estimate with `estimate_stage(project_id, stage,
+    params)`, the same params.
+  - `resample_prompts(project_id, leaf_id)` — starts a stage-2 run for that leaf. Estimate with
+    `estimate_stage(project_id, 2, {"leaf_id": leaf_id, "force": true})`. `force` is required
+    here, not optional: `resample_prompts` deletes the leaf's unused prompts *before* it starts
+    the run, so an estimate taken without `force` counts prompts that are about to be deleted and
+    comes back near zero. This is a different job for `force` than the budget override below —
+    here it makes the estimate honest, it does not bypass a cap.
+  - `run_filters(project_id, config)` — applying rules is free, but if `near_dup` is on and
+    `get_stage_data(project_id, stage=6)` shows `embeddings_missing > 0`, the call also starts a
+    background stage-6 embeddings run. Check `embeddings_missing` first; if it's positive, estimate
+    with `estimate_stage(project_id, 6)` before calling.
 - An `over_budget` error is resolved by raising the cap or shrinking the stage. Do not pass
   `force: true` to override it unless the user asks for that in this turn.
 
