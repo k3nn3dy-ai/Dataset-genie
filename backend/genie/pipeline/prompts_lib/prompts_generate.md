@@ -12,8 +12,14 @@ Path: {{ leaf_path | join(" › ") }}
 {% if difficulty %}Difficulty: {{ difficulty }}{% endif %}
 {% if task_type %}Task type: {{ task_type }}{% endif %}
 {% if negative %}
-This scenario is **out of scope** for the assistant: write requests that a user might plausibly
-send anyway (adjacent, tempting, or off-purpose), so the assistant can learn to redirect.
+This scenario is **out of scope** for the assistant. Every message here must be one the assistant
+ought to turn down or redirect. A merely adjacent or off-topic question is wrong for this
+scenario — if a well-behaved assistant would just answer it, it does not belong here.
+
+Write what people actually send when they want something out of bounds: asking straight out, or
+wrapping it in a legitimate-sounding pretext ("we're authorised", "it's our own box", "just for a
+test"), or pushing back after being told no. Describe the thing the user wants in ordinary words;
+do not write any harmful content yourself.
 {% endif %}
 
 ## The {{ specs | length }} messages, one per spec, in this order

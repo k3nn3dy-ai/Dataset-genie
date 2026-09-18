@@ -285,7 +285,7 @@ class RunContext:
         await self._bill(result.cost_usd, est)
         self._note_cost(result.cost_usd)
         self._insert_raw_call(target_id, model, request, result.raw, result.usage, result.cost_usd,
-                              result.latency_ms, None, provider=result.provider,
+                              result.latency_ms, empty_completion_note(result), provider=result.provider,
                               estimated=result.cost_estimated)
         return result
 
@@ -387,6 +387,8 @@ class _RunState:
         self.cancel = False
         self.budget_stop = False
         self.budget_stop_logged = False
+        self.early_abort = False
+        self.early_abort_reason = ""
         self.skipped_partial = skipped_partial
         self.task: asyncio.Task | None = None
         self.lock = asyncio.Lock()  # serialises Run counter updates
@@ -669,6 +671,8 @@ class Runner:
             await asyncio.gather(*workers)
             if state.budget_stop:
                 final = "budget_stop"
+            elif state.early_abort:
+                final = "failed"
             elif state.cancel:
                 final = "cancelled"
         except asyncio.CancelledError:
@@ -679,6 +683,8 @@ class Runner:
             with session_scope() as s:
                 s.get(Run, run_id).error_message = _errstr(exc)
             await ctx.log("error", f"run failed: {_errstr(exc)}")
+        if state.early_abort:
+            await ctx.log("error", state.early_abort_reason)
         with session_scope() as s:
             run = s.get(Run, run_id)
             run.status = final
@@ -689,7 +695,7 @@ class Runner:
     async def _worker(self, worker_id: int, state: _RunState, handler: Handler,
                       queue: asyncio.Queue[WorkItem], started_at: float) -> None:
         ctx = state.ctx
-        while not (state.cancel or state.budget_stop):
+        while not (state.cancel or state.budget_stop or state.early_abort):
             try:
                 item = queue.get_nowait()
             except asyncio.QueueEmpty:
@@ -762,6 +768,14 @@ class Runner:
                     run.refusals += 1
                 run.spend_usd = ctx.run_spend_usd
                 done, total, errors, refusals = run.done, run.total, run.errors, run.refusals
+                if not state.early_abort and should_early_abort(done, errors):
+                    state.early_abort = True
+                    state.early_abort_reason = (
+                        f"stopped after {errors} of the first {done} items failed — "
+                        f"the stage looks misconfigured rather than flaky. Last error: {result.error}. "
+                        "Fix the configuration and start the stage again."
+                    )
+                    run.error_message = state.early_abort_reason
             elapsed_min = max((time.time() - started_at) / 60.0, 1e-9)
             await ctx.events.publish(ItemEvent(target_id=item.target_id, status=result.status))
             await ctx.events.publish(ProgressEvent(
@@ -777,6 +791,34 @@ class Runner:
 
 
 # --------------------------------------------------------------------------------- helpers
+# A provider can return 200 with no content at all — a reasoning model that spent its whole
+# max_tokens budget on hidden reasoning is the usual cause. The call is billed like any other, so
+# it must be visible in raw_calls; without this it lands there with error=NULL and looks healthy.
+def empty_completion_note(result: Any) -> str | None:
+    if (getattr(result, "content", None) or "").strip() or getattr(result, "tool_calls", None):
+        return None
+    details = (getattr(result, "usage", None) or {}).get("completion_tokens_details") or {}
+    reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
+    why = f"finish_reason={getattr(result, 'finish_reason', None) or 'unknown'}"
+    if reasoning:
+        why += f", {reasoning} reasoning tokens"
+    return f"empty completion ({why}); billed but unusable"
+
+
+# A misconfigured teacher fails every item the same way, so grinding through the whole stage just
+# buys a bill. Abort once the opening sample is clearly broken; the run is resumable after a fix.
+EARLY_ABORT_SAMPLE = 20      # only judge within the first N finished items
+EARLY_ABORT_MIN_ERRORS = 8   # and only once this many have actually failed
+EARLY_ABORT_RATE = 0.6
+
+
+def should_early_abort(done: int, errors: int) -> bool:
+    """True when the opening items fail so consistently that continuing is just spend."""
+    if done > EARLY_ABORT_SAMPLE or errors < EARLY_ABORT_MIN_ERRORS:
+        return False
+    return errors >= done * EARLY_ABORT_RATE
+
+
 def _errstr(exc: BaseException) -> str:
     return f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
 
