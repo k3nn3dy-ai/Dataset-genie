@@ -34,6 +34,42 @@ stage instead would pay again for everything already done.
 `wait_for_run` returns `timed_out: true` when its timeout elapses — capped at 120 seconds. The run
 is still going. Call `wait_for_run` again.
 
+Ask for 45–55 seconds rather than the 120-second maximum: the MCP client's own request timeout
+fires at roughly the server's ceiling, so the documented maximum tends to come back as a transport
+error ("The operation timed out") instead of the `timed_out: true` flag. That transport error also
+means the run is still going — it is not a failure either, but you learn nothing from it. Poll
+short, or use `get_run` for a long stage.
+
+## Not an error code: a teacher that returns nothing
+
+A reasoning model can spend its whole `max_tokens` budget on internal reasoning tokens and return
+no visible text. The item fails with a message the server writes itself:
+
+```
+<slug> returned no visible text (finish_reason=length, 2450 reasoning tokens; max_tokens=2048).
+Raise max_tokens for this reasoning model or pick another teacher, then resume the run.
+```
+
+Three things make this costly to discover:
+
+- **`estimate_stage` cannot predict it.** It projects output tokens as a fraction of `max_tokens`,
+  so a configuration that can never produce text estimates like a healthy run. Observed: a $4.02
+  estimate for a stage where two calls in three came back empty.
+- **The empty calls are still billed.** Reasoning tokens are charged as output whether or not any
+  text follows them.
+- **`raw_calls` does not record them.** An empty response is not an API error, so the call log
+  stays clean while `run_items` fills with failures. Count errors from `get_run`'s
+  `items_by_status`, never from the call log.
+
+Recovery: raise `max_tokens` clear of the model's reasoning appetite — it needs room for the
+reasoning *and* the answer — or pick a non-reasoning teacher. `resume_run` replays the run's stored
+params, so a run started with the too-small `max_tokens` fails the same way; change the config and
+start a fresh `run_stage` instead.
+
+Before committing a teacher to a whole stage, start it and read `items_by_status` after the first
+handful of items. `list_models` showing `reasoning` in `supported_parameters` is a hint, not proof
+— most slugs list it.
+
 ## The MCP endpoint itself
 
 A 503 from `/mcp` means `GENIE_MCP_TOKEN` is empty in the server's environment; the UI and

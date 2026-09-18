@@ -47,6 +47,12 @@ For each stage, in order:
 `wait_for_run` clamps `timeout_s` to 120 seconds and returns `timed_out: true` instead of raising.
 A timeout means the run is still going — call it again. It is not a failure.
 
+**Pass 45–55, not 120.** The MCP client's own request timeout fires at about the same point as the
+server's 120-second ceiling, so asking for the documented maximum usually surfaces as a transport
+error ("The operation timed out") rather than the graceful `timed_out: true` flag. A shorter poll
+returns the flag cleanly — loop it. For a stage that runs for tens of minutes, `get_run(run_id)`
+is a cheaper single-shot check.
+
 Terminal statuses: `done`, `failed`, `cancelled`, `budget_stop`. A `budget_stop` is a **successful
 partial run**, not an error: the cap was reached and the remaining work is still queued. Raise
 `budget_cap_usd` with `update_project`, then `resume_run` — do not re-run the stage, which would
@@ -54,7 +60,8 @@ pay for the completed items twice. Before that `resume_run`, check `get_run` and
 the spend gate below (§ 4).
 
 Between stages, `get_stage_data` is free. Use it to sanity-check output before paying for the
-stage that consumes it.
+stage that consumes it. It pages at 50 items and ignores a smaller `limit`, so expect a full page
+back and read what you need from it.
 
 ## 4. The spend gate
 

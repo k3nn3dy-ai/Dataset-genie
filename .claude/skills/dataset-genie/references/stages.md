@@ -13,7 +13,8 @@ target is `topics × subtopics_per_topic × leaves_per_topic × rows_per_leaf`. 
 leaf) the subtopic level is skipped entirely and `subtopics_per_topic` is ignored, making it
 `topics × leaves_per_topic × rows_per_leaf`. `negative_branches` (on by default) adds one further
 topic beyond `topics`, with its own leaves, so the real count runs above the nominal figure either
-way. Treat the formula as a sanity check and `estimate_stage` as the authority.
+way. Those leaves are only as negative as stage 2's prompt model is willing to make them — see
+stage 2 below. Treat the formula as a sanity check and `estimate_stage` as the authority.
 
 **This stage never reports `nothing_to_do`** — its plan always contains exactly one work item, so
 there is no short-circuit when a tree already exists. Re-running it regenerates the tree from
@@ -30,10 +31,27 @@ and `adversarial_pct`.
 `nothing_to_do`: every leaf already has its `rows_per_leaf` prompts. Use `force` to regenerate, or
 `resample_prompts(project_id, leaf_id)` to redo one leaf.
 
+**A negative branch does not guarantee negative prompts.** Stage 1's `negative_branches` creates
+leaves whose labels describe out-of-bounds requests, but this stage still has to write the prompts,
+and a safety-trained prompt model will often decline the brief and substitute an ordinary on-topic
+question. Observed with `openai/gpt-4o-mini`: 5 of 72 negative-leaf prompts were even faintly
+adversarial, and only 2 were genuinely refusal-worthy — so rows meant to teach refusal taught
+ordinary helpful answers instead, tagged as negative.
+
+Nothing downstream catches it. The judge's Safety criterion asks whether the model redirected an
+unsafe request; a helpful answer to a benign prompt scores *well*, which is exactly what these rows
+are. Sample the negative leaves with `get_stage_data(project_id, stage=2)` and read the prompts
+before paying for stage 3. If they came back benign, changing the prompt model is the lever —
+re-running the same one reproduces the same substitution.
+
 ## 3. responses
 
 Consumes prompts. Produces the teacher answer for each, from the `responses.ensemble` model slots.
 This is normally the most expensive stage — estimate carefully.
+
+Check `responses.max_tokens` against the teacher before running. A reasoning model can burn the
+whole budget on reasoning tokens and return nothing, billed in full, with `estimate_stage` none the
+wiser — see "a teacher that returns nothing" in `troubleshooting.md`.
 
 `nothing_to_do`: every prompt already has a response. Use `regenerate: true`, or `prompt_ids` to
 redo a subset.
