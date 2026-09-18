@@ -101,6 +101,11 @@ an entry with only `url` is treated as stdio and skipped.
 Native: `export GENIE_MCP_TOKEN=...` before `make start`. If the token is empty, `/mcp`
 returns 503 and the rest of the app still works. Do not expose the port on a network.
 
+The repo ships a Claude skill at `.claude/skills/dataset-genie/` that teaches an agent the
+pipeline the tool schemas cannot describe: stage order, the per-stage `params` keys, reading judge
+scores, and what each error code means. Claude Code picks it up automatically when you work in
+this repo. It always estimates a stage and waits for your approval before spending.
+
 ### Option B · Native (macOS / Linux, for development)
 
 Requirements: Python 3.11 via [`uv`](https://docs.astral.sh/uv/), Node ≥ 20, `make`.

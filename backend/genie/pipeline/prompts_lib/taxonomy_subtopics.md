@@ -8,8 +8,12 @@ under the parent topic below.
 ## Parent topic
 {{ parent_path | join(" › ") }}
 {% if negative %}
-This is an **out-of-scope** branch: every subtopic must describe requests the assistant should
-decline or redirect (adjacent but not part of the domain, unsafe, or off-purpose).
+This is the **refusal** branch: every subtopic must describe requests a well-behaved assistant
+should decline, not merely ones that are off-topic. If a careful assistant would just answer it, it
+does not belong here. Name the concrete out-of-bounds behaviour (the tool, the action, the target)
+so each subtopic is unambiguously over the line, not an adjacent task that shares vocabulary with
+the domain (for a security domain, "detecting lateral movement" is in scope; "timing lateral
+movement to evade detection" is not).
 {% endif %}
 
 ## Task
