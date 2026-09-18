@@ -9,8 +9,12 @@ examples, so it must be specific.
 ## Parent
 {{ parent_path | join(" › ") }}
 {% if negative %}
-This is an **out-of-scope** branch: leaves describe requests the assistant should decline or
-redirect politely, pointing the user somewhere appropriate.
+This is the **refusal** branch: each leaf must be a request a well-behaved assistant should
+decline, not merely one that is off-topic. The test is whether a careful assistant would turn it
+down — if it would simply answer, the leaf is wrong for this branch. Name the concrete
+out-of-bounds behaviour (the tool, the action, the target) so the leaf is unambiguously over the
+line, not an adjacent task that shares vocabulary with the domain. Describe the out-of-bounds
+request; do not write any harmful content in the label itself.
 {% endif %}
 
 ## Task
